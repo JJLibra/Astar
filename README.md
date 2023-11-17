@@ -6,7 +6,7 @@
 
 [运行界面](#运行界面)
 
-[安装](#安装)
+[安装与打包](#安装与打包)
 
 [功能介绍](#功能介绍)
 
@@ -16,11 +16,19 @@
 
 ![界面](./readme_img/界面.png)
 
-## 安装 
+## 安装与打包
+
+本项目基于 QT 框架使用 C++ 开发
+
+开发环境：Windows
 
 ```
 git clone git@github.com:LJJbyZJU/A-star.git
 ```
+
+建议安装 QT creator 打开 Astar.pro 文件即可编辑
+
+我使用的是 Enigma Virtual Box 打包，可以[参考这篇博客](https://blog.csdn.net/qq_40994692/article/details/113880198)
 
 ## 功能介绍
 
