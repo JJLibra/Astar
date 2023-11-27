@@ -1,0 +1,68 @@
+if(dir!=2){ //八方向
+                for(int i=1; i<=4; i++){
+                    optrx=current.x+(i>=3?1:-1);
+                    optry=current.y+pow(-1,i);
+                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue; //遇到边界
+                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue; //遇到交叉 防止穿墙
+                    if(anode[optrx][optry].isClosed) continue; //遇到障碍
+                    if(anode[optrx][optry].g==10000){ //新的扩展点
+//                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
+//                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                        //注意 与A*不同 需先计算rhs 才能计算key
+
+                        calculateKey(anode[optrx][optry]); //计算当前节点的key
+                        anode[optrx][optry].lastpoint.setX(current.x);
+                        anode[optrx][optry].lastpoint.setY(current.y);
+                        putLPAopenlist(openlist,anode[optrx][optry]); //按key大小入队
+                        anode[optrx][optry].isInOpenList=true;
+                    }
+                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                        anode[optrx][optry].g=current.g+14;
+                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                        anode[optrx][optry].lastpoint.setX(current.x);
+                        anode[optrx][optry].lastpoint.setY(current.y);
+                        resortopenlist(openlist,anode[optrx][optry],1);
+                    }
+                }
+            }
+            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+                optrx=current.x+((i+1)%2)*(i-3);
+                optry=current.y+(i%2)*(i-2);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
+                if(anode[optrx][optry].isClosed) continue; //判断障碍
+                if(anode[optrx][optry].g==10000){ //新的扩展点
+//                    anode[optrx][optry].g=current.g+10;
+//                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;   //f=g+h
+                    //注意 与A*不同 需先计算rhs 才能计算key
+
+
+                    calculateKey(anode[optrx][optry]);
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putLPAopenlist(openlist,anode[optrx][optry]); //按key大小入队
+                    anode[optrx][optry].isInOpenList=true;
+                }
+                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+10;
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+            if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
+                notfound();
+                return;
+            }
+            if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
+            {
+                int openlistlen=openlist.size();
+                int i=0;
+                while (i<openlistlen) {
+                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+                    i++;
+                }
+                break;
+            }
+            current=getLPAopenlist(openlist); //将队列首节点出队进行扩展
+            status[current.x][current.y]=5; //出列 说明进行扩展 设置扩展点状态

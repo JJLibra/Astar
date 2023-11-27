@@ -24,7 +24,7 @@ Astar::Astar(const QString &text, QWidget *parent,int width,int height,int recta
     dynamic=1;
     isnormal=0;
 }
-//核心函数
+//主要函数
 void Astar::runAstar(){
     if(issolved){
         QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);

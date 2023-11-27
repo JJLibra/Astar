@@ -1,0 +1,383 @@
+        //先清除扩展点列表
+        openlist.clear();
+        if(start->isNull() or end->isNull()){
+            QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
+            return;
+        }
+
+        //记录起点、终点的坐标信息
+        startx=start->x();
+        starty=start->y();
+        endx=end->x();
+        endy=end->y();
+        //遍历阵列中的节点，初始化节点信息
+        for(int i=1; i<=h; i++){
+            for(int j=1; j<=w; j++){
+                anode[i][j].g=0;
+
+                switch(hfunc){  //选择预估距离计算公式
+                case 15: //LPA* 欧式距离
+                    anode[i][j].h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+                    break;
+                case 16: //LPA* 曼哈顿
+                    anode[i][j].h=(abs(i-endx)+abs(j-endy))*10;
+                    break;
+                case 17: //LPA* 切比雪夫
+                    anode[i][j].h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
+                    break;
+                }
+
+                anode[i][j].cost=anode[i][j].h; //因为初始g都为0，所以不需要加，cost等于预估距离即可
+                anode[i][j].x=i;
+                anode[i][j].y=j;
+                anode[i][j].isInOpenList=false;
+
+                if(status[i][j]==0){ //空白 表示可以正常通行
+                    anode[i][j].isClosed=false;
+                }
+                if(status[i][j]==1 or status[i][j]==2){ //1代表障碍 2代表起点
+                    anode[i][j].isClosed=true;
+                }
+            }
+        }
+        Astarnode current;  //表示当前节点
+        current=anode[startx][starty];  //从起点开始
+        int optrx;
+        int optry;
+        while(1){
+            if(dir!=2){ //八方向
+                for(int i=1; i<=4; i++){
+                    optrx=current.x+(i>=3?1:-1);
+                    optry=current.y+pow(-1,i);
+                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
+                    if(anode[optrx][optry].isClosed) continue;
+                    if(anode[optrx][optry].g==0){
+                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
+                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                        anode[optrx][optry].lastpoint.setX(current.x);
+                        anode[optrx][optry].lastpoint.setY(current.y);
+                        putopenlist(openlist,anode[optrx][optry],1);
+                        anode[optrx][optry].isInOpenList=true;
+                        //status[optrx][optry]=5;
+                    }
+                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                        anode[optrx][optry].g=current.g+14;
+                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                        anode[optrx][optry].lastpoint.setX(current.x);
+                        anode[optrx][optry].lastpoint.setY(current.y);
+                        resortopenlist(openlist,anode[optrx][optry],1);
+                    }
+                }
+            }
+            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+                optrx=current.x+((i+1)%2)*(i-3);
+                optry=current.y+(i%2)*(i-2);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
+                if(anode[optrx][optry].isClosed) continue;
+                if(anode[optrx][optry].g==0){ //新的扩展点
+                    anode[optrx][optry].g=current.g+10;
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;   //f=g+h
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                    //status[optrx][optry]=5;
+                }
+                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+10;
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+            if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
+                notfound();
+                return;
+            }
+            if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
+            {
+                int openlistlen=openlist.size();
+                int i=0;
+                while (i<openlistlen) {
+                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+                    i++;
+                }
+                break;
+            }
+            current=getopenlist(openlist,1);
+            status[current.x][current.y]=5;
+        }
+        issolved=true;
+        isLPAsolved=true;
+        isLPAMapChanged=false;
+        //shutevent=true;
+        updateandpaint();
+
+
+
+
+
+
+//初始化
+void init(){
+    for(int i=1;i<=h;i++){
+        for(int j=1;j<=w;j++){
+            anode[i][j].x=i;
+            anode[i][j].y=j;
+            anode[i][j].g=INF; //将所有节点的g值设为无穷大
+            anode[i][j].h=abs(i-endx)+abs(j-endy); //使用曼哈顿距离作为启发函数
+            anode[i][j].cost=anode[i][j].g+anode[i][j].h; //计算f值
+            anode[i][j].isInOpenList=false; //将所有节点标记为不在优先队列中
+            anode[i][j].isClosed=false; //将所有节点标记为未访问过
+            anode[i][j].lastpoint.setX(0);
+            anode[i][j].lastpoint.setY(0);
+        }
+    }
+    anode[startx][starty].rhs=0; //将起点的rhs值设为0
+    putopenlist(openlist,anode[startx][starty],2); //将起点加入到优先队列中
+    anode[startx][starty].isInOpenList=true; //将起点标记为在优先队列中
+}
+
+//计算节点的键值
+void calculateKey(node &n){
+    n.k1=min(n.g,n.rhs)+n.h; //k1=f
+    n.k2=min(n.g,n.rhs); //k2=g
+}
+
+//将节点加入到优先队列中，mode=1表示A*算法，mode=2表示LPA*算法
+void putopenlist(QVector<node> &openlist,node &n,int mode){
+    if(mode==1){
+        int i=0;
+        while(i<openlist.size() and openlist[i].cost<n.cost) i++; //按照f值升序排列
+        openlist.insert(i,n);
+    }
+    else if(mode==2){
+        calculateKey(n); //计算节点的键值
+        int i=0;
+        while(i<openlist.size() and (openlist[i].k1<n.k1 or (openlist[i].k1==n.k1 and openlist[i].k2<n.k2))) i++; //按照k1升序，k2升序排列
+        openlist.insert(i,n);
+    }
+}
+
+//从优先队列中取出键值最小的节点，mode=1表示A*算法，mode=2表示LPA*算法
+node getopenlist(QVector<node> &openlist,int mode){
+    node n=openlist[0];
+    openlist.remove(0);
+    if(mode==1){
+        n.isInOpenList=false; //将节点标记为不在优先队列中
+    }
+    else if(mode==2){
+        n.isInOpenList=false; //将节点标记为不在优先队列中
+        n.isClosed=true; //将节点标记为已访问过
+    }
+    return n;
+}
+
+//更新优先队列中的节点，mode=1表示A*算法，mode=2表示LPA*算法
+void resortopenlist(QVector<node> &openlist,node &n,int mode){
+    int i=0;
+    while(i<openlist.size() and openlist[i].x!=n.x and openlist[i].y!=n.y) i++; //找到节点在优先队列中的位置
+    if(i<openlist.size()){
+        openlist.remove(i); //将节点从优先队列中移除
+        putopenlist(openlist,n,mode); //将节点重新加入到优先队列中
+    }
+}
+
+//更新节点的rhs值
+void updateRhs(node &n){
+    int minrhs=INF; //最小的rhs值
+    int minx,miny; //最小的rhs值对应的前驱节点的坐标
+    for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+        int optrx=n.x+((i+1)%2)*(i-3);
+        int optry=n.y+(i%2)*(i-2);
+        if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue; //判断是否到达边界
+        if(anode[optrx][optry].g+10<minrhs){ //找到最小的rhs值
+            minrhs=anode[optrx][optry].g+10;
+            minx=optrx;
+            miny=optry;
+        }
+    }
+    n.rhs=minrhs; //更新rhs值
+    n.lastpoint.setX(minx); //更新前驱节点
+    n.lastpoint.setY(miny);
+}
+
+//LPA*算法
+void LPAstar(){
+    init(); //初始化
+    node current=getopenlist(openlist,2); //从优先队列中取出键值最小的节点
+    while(current.k1<calculateKey(anode[endx][endy]) or anode[endx][endy].rhs!=anode[endx][endy].g){ //终止条件：优先队列为空或者终点的键值大于等于当前节点的键值并且终点是局部一致的
+        if(current.g>current.rhs){ //如果当前节点是局部过一致的
+            current.g=current.rhs; //更新g值
+            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+                int optrx=current.x+((i+1)%2)*(i-3);
+                int optry=current.y+(i%2)*(i-2);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue; //判断是否到达边界
+                if(!anode[optrx][optry].isClosed){ //如果后继节点没有被访问过
+                    updateRhs(anode[optrx][optry]); //更新后继节点的rhs值
+                    if(!anode[optrx][optry].isInOpenList){ //如果后继节点不在优先队列中
+                        putopenlist(openlist,anode[optrx][optry],2); //将后继节点加入到优先队列中
+                        anode[optrx][optry].isInOpenList=true; //将后继节点标记为在优先队列中
+                    }
+                    else{ //如果后继节点在优先队列中
+                        resortopenlist(openlist,anode[optrx][optry],2); //更新后继节点在优先队列中的位置
+                    }
+                }
+            }
+        }
+        else{ //如果当前节点是局部不一致的
+            current.g=INF; //将g值设为无穷大
+            for(int i=0; i<=4; i++){ //四方向和当前节点本身，i=
+
+//LPA*算法
+void LPAstar(){
+    init(); //初始化
+    node current=getopenlist(openlist,2); //从优先队列中取出键值最小的节点
+    while(current.k1<calculateKey(anode[endx][endy]) or anode[endx][endy].rhs!=anode[endx][endy].g){ //终止条件：优先队列为空或者终点的键值大于等于当前节点的键值并且终点是局部一致的
+        if(current.g>current.rhs){ //如果当前节点是局部过一致的
+            current.g=current.rhs; //更新g值
+            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+                int optrx=current.x+((i+1)%2)*(i-3);
+                int optry=current.y+(i%2)*(i-2);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue; //判断是否到达边界
+                if(!anode[optrx][optry].isClosed){ //如果后继节点没有被访问过
+                    updateRhs(anode[optrx][optry]); //更新后继节点的rhs值
+                    if(!anode[optrx][optry].isInOpenList){ //如果后继节点不在优先队列中
+                        putopenlist(openlist,anode[optrx][optry],2); //将后继节点加入到优先队列中
+                        anode[optrx][optry].isInOpenList=true; //将后继节点标记为在优先队列中
+                    }
+                    else{ //如果后继节点在优先队列中
+                        resortopenlist(openlist,anode[optrx][optry],2); //更新后继节点在优先队列中的位置
+                    }
+                }
+            }
+        }
+        else{ //如果当前节点是局部不一致的
+            current.g=INF; //将g值设为无穷大
+            for(int i=0; i<=4; i++){ //四方向和当前节点本身，i=0表示当前节点，i=1，2，3，4分别代表上右下左
+                int optrx=current.x+((i+1)%2)*(i-3);
+                int optry=current.y+(i%2)*(i-2);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue; //判断是否到达边界
+                if(anode[optrx][optry].rhs==current.g+10){ //如果后继节点的rhs值等于当前节点的g值加上边缘代价
+                    updateRhs(anode[optrx][optry]); //更新后继节点的rhs值
+                }
+                if(!anode[optrx][optry].isInOpenList){ //如果后继节点不在优先队列中
+                    putopenlist(openlist,anode[optrx][optry],2); //将后继节点加入到优先队列中
+                    anode[optrx][optry].isInOpenList=true; //将后继节点标记为在优先队列中
+                }
+                else{ //如果后继节点在优先队列中
+                    resortopenlist(openlist,anode[optrx][optry],2); //更新后继节点在优先队列中的位置
+                }
+            }
+        }
+        if(openlist.isEmpty()){ //如果优先队列为空，说明没有可行通路
+            notfound();
+            return;
+        }
+        current=getopenlist(openlist,2); //从优先队列中取出键值最小的节点
+    }
+    //找到最短路径
+    int openlistlen=openlist.size();
+    int i=0;
+    while (i<openlistlen) {
+        if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+        i++;
+    }
+    int x=endx,y=endy;
+    while(x!=startx or y!=starty){ //从终点回溯到起点
+        status[x][y]=6; //标记最短路径
+        int tempx=x,tempy=y;
+        x=anode[tempx][tempy].lastpoint.x();
+        y=anode[tempx][tempy].lastpoint.y();
+    }
+    status[startx][starty]=6; //标记起点
+}
+
+
+
+
+void Astar::GofirstSearch(){
+    Astarnode node,anode[endx][endy];
+    while(CompareKey(openlist,anode[endx][endy]) or anode[endx][endy].rhs!=anode[endx][endy].g){
+        node=getLPAopenlist(openlist); //队列首节点出队
+        if(node.g>node.rhs){
+            node.g=node.rhs;
+            //for all s in succ(u) UpdateVertex(s)
+            //for (successor : node.getSuccessors())
+            //    updateNode(successor);
+        }
+        else{
+            node.g=10000;
+            //for all s in succ(u)U{u} UpdateVertex(s)
+            //updateNode(node);
+            //for (successor : node.getSuccessors())
+            //    updateNode(successor);
+        }
+    }
+}
+
+
+
+
+
+void main() {
+  initialize();
+  while (true) {
+    computeShortestPath(); //第一次搜索
+    while (!hasCostChanges()) //查看是否变化
+      sleep;
+    for (edge : getChangedEdges()) {
+        edge.setCost(getNewCost(edge));
+        updateNode(edge.endNode);
+    }
+  }
+}
+
+void initialize() {
+  queue = new PriorityQueue();
+  for (node : getAllNodes()) {
+    node.g = INFINITY;
+    node.rhs = INFINITY;
+  }
+  start.rhs = 0;
+  queue.insert(start, calculateKey(start));
+}
+
+/** 优先级队列中扩展节点. */
+void computeShortestPath() {
+  while ((queue.getTopKey() < calculateKey(goal)) || (goal.rhs != goal.g)) {
+    node = queue.pop();
+    if ((node.g > node.rhs) {
+      node.g = node.rhs;
+      for (successor : node.getSuccessors())
+        updateNode(successor);
+    } else {
+      node.g = INFINITY;
+      updateNode(node);
+      for (successor : node.getSuccessors())
+        updateNode(successor);
+    }
+  }
+}
+
+/** 重新计算节点的rhs并将其从队列中删除。.
+ * 如果节点在局部变得不一致，则使用其新key(re-)将节点插入队列。. */
+void updateNode(node) {
+  if (node != start) {
+    node.rhs = INFINITY;
+    for (predecessor: node.getPredecessors())
+      node.rhs = min(node.rhs, predecessor.g + predecessor.getCostTo(node));
+    if (queue.contains(node))
+      queue.remove(node);
+    if (node.g != node.rhs)
+      queue.insert(node, calculateKey(node));
+  }
+}
+
+int[] calculateKey(node) {
+  return {min(node.g, node.rhs) + node.getHeuristic(goal), min(node.g, node.rhs)};
+}
+
+
