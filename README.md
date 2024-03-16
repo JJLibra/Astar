@@ -78,43 +78,43 @@ git clone git@github.com:LJJbyZJU/A-star.git
 
 本项目可以自由设置地图的长宽，单元格有四种状态选择：
 
-[设置地图](./RDME_IMG/Astar_gif/设置地图.gif)
+![设置地图](./RDME_IMG/Astar_gif/设置地图.gif)
 
 - 优化Astar算法
 
 其中一种优化A星算法的演示，且本项目支持采用**贝塞尔曲线**作为无人机路径轨迹：
 
-[Astar算法演示](./RDME_IMG/Astar_gif/A星&贝塞尔.gif)
+![Astar算法演示](./RDME_IMG/Astar_gif/A星&贝塞尔.gif)
 
 - 生成随机地图 & 重置地图数据
 
 支持生成随机地图（生成逻辑比较简单，利用伪随机数生成，二次开发时可以优化这里的生成逻辑）和一键重置地图参数：
 
-[随机地图](./RDME_IMG/Astar_gif/随机地图.gif)
+![随机地图](./RDME_IMG/Astar_gif/随机地图.gif)
 
 - 保存地图到本地
 
 考虑到项目的展示环节，不可能现场画地图，所以本项目支持将地图保存到本地：
 
-[保存地图](./RDME_IMG/Astar_gif/保存地图.gif)
+![保存地图](./RDME_IMG/Astar_gif/保存地图.gif)
 
 - 打开本地地图 & 深度优先算法演示
 
 打开保存的.Amap文件，演示深度优先算法，按下`深搜最短`可以获得所有深搜得到路径中的最短路径（深搜实现没有问题，只是操作时需要注意，一步步来，否则容易出bug）：
 
-[打开地图](./RDME_IMG/Astar_gif/深搜.gif)
+![打开地图](./RDME_IMG/Astar_gif/深搜.gif)
 
 - 导入背景图片
 
 导入图片作为背景，描绘地图（二次开发时建议开发栅格化处理）：
 
-[背景图片](./RDME_IMG/Astar_gif/打开&清除背景.gif)
+![背景图片](./RDME_IMG/Astar_gif/打开&清除背景.gif)
 
 - 其他
 
 还有不少小细节（关于页、可视化性能分析、操作提示框、页脚状态栏、进入的淡入淡出...）：
 
-[其他](./RDME_IMG/Astar_gif/其他.gif)
+![其他](./RDME_IMG/Astar_gif/其他.gif)
 
 ## 其他说明
 
