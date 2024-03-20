@@ -44,8 +44,8 @@ Ich benutze Enigma Virtual Box Paket, Sie können [siehe diesen Blog](https://bl
 5. obere Symbolleiste kann ausgeblendet werden
 6. der optimale Pfad wird angezeigt, während die Erkundungspunkte in verschiedenen Farben auf der Karte dargestellt werden.
 7. die Karten können in einem lokalen Ordner als .Amap-Dateien gespeichert werden.
-8 Gespeicherte .Amap-Dateien können in die Karte geladen werden.
-9 Leistungsanalyse und Datenvisualisierung
+8. Gespeicherte .Amap-Dateien können in die Karte geladen werden.
+9. Leistungsanalyse und Datenvisualisierung
 10. zufällige Karten generieren (die Generierungslogik muss noch optimiert werden, es ist noch nicht möglich, sicherzustellen, dass die generierten Karten immer machbare Pfade haben).
 11. Import lokaler Bilder als Kartenhintergrund, eine Pseudo-Rasterung
 12. "Über uns"-Seite
