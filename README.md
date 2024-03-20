@@ -132,3 +132,7 @@ There are also many small details (about page, visual performance analysis, oper
 ## Others
 
 The project is used for school curriculum, so some ico icons are related to NWPU. In addition, there are still many irregularities in the project production. There are many small details but also many bugs. There is also a bit of history... Please bear with me.
+
+## Star History
+
+![star](https://star-history.com/#/LJJbyZJU&Date)
