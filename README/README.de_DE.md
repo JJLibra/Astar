@@ -16,7 +16,7 @@
 
 ## Laufende-Schnittstelle
 
-![Interface](./RDME_IMG/Benutzeroberfläche.jpg)
+![Interface](./RDME_IMG/界面.jpg)
 
 ## Installation-und-Paketierung
 
