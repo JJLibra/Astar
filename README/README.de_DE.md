@@ -121,3 +121,5 @@ Es gibt noch eine ganze Reihe weiterer kleiner Details (About Page, visuelle Lei
 Das Projekt ist für eine Schulklasseneinrichtung gedacht, daher sind einige der ico-Icons mit NWPU verbunden. Außerdem gibt es noch eine Menge Unregelmäßigkeiten in der Produktion des Projekts, es gibt eine Menge kleiner Details, aber auch eine Menge Bugs, und auch ein bisschen Shi Shan... Bitte haben Sie Geduld mit uns.
 
 Übersetzt mit DeepL.com (kostenlose Version)
+
+[top](#A-stern)
