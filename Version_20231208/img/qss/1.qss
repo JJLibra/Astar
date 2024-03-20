@@ -1,0 +1,240 @@
+/* 工具栏按钮 */
+QToolButton#qt_toolbar_ext_button {
+    background: #58595a
+}
+QTabBar QToolButton::right-arrow:enabled {
+     image: url(:/img/qss_icons/rc/right_arrow.png);
+ }
+
+ QTabBar QToolButton::left-arrow:enabled {
+     image: url(:/img/qss_icons/rc/left_arrow.png);
+ }
+
+QTabBar QToolButton::right-arrow:disabled {
+     image: url(:/img/qss_icons/rc/right_arrow_disabled.png);
+ }
+
+ QTabBar QToolButton::left-arrow:disabled {
+     image: url(:/img/qss_icons/rc/left_arrow_disabled.png);
+ }
+ QToolButton {
+     color: black;
+     background-color: transparent;
+     border: 0px transparent #76797C;
+     border-radius: 0px;
+     padding: 1px;
+     margin-right: 5px;
+ }
+
+ QToolButton:hover, QToolButton::menu-button:hover {
+     background-color: #e3f5ff;
+     border: 1px solid #d7daff;
+     border-radius: 5px;
+     padding: 1px;
+ }
+
+ QToolButton:checked, QToolButton:pressed, QToolButton::menu-button:pressed {
+     color: black;
+     background-color: #d7ebff;
+     /*border: 1px solid #b4b4b4;*/
+     border-radius: 5px;
+     padding: 1px;
+ }
+
+ /* the subcontrol below is used only in the InstantPopup or DelayedPopup mode */
+ QToolButton::menu-indicator {
+     image: url(:/img/qss_icons/rc/down_arrow.png);
+     top: -7px; left: -2px; /* shift it a bit */
+ }
+
+ /* the subcontrols below are used only in the MenuButtonPopup mode */
+ QToolButton::menu-button {
+     border: 1px transparent #76797C;
+     border-top-right-radius: 6px;
+     border-bottom-right-radius: 6px;
+     /* 16px width + 4px for border = 20px allocated above */
+     width: 16px;
+     outline: none;
+ }
+
+ QToolButton::menu-arrow {
+     image: url(:/img/qss_icons/rc/down_arrow.png);
+ }
+
+ QToolButton::menu-arrow:open {
+     border: 1px solid #76797C;
+ }
+
+/* 菜单栏 */
+QMenuBar
+{
+    background-color: white;
+    /* color: black; */
+}
+
+QMenuBar::item
+{
+    color: black;
+    background-color: white;
+    background: transparent;
+    /* padding: 2px 20px 2px 20px; */
+}
+
+QMenuBar::item:selected
+{
+    background-color: #dedede;
+    /* border: 2px solid #76797C;
+    border-radius: 8px; */
+}
+
+QMenuBar::item:pressed
+{
+    color: #000;
+    margin-bottom:-1px;
+    padding-bottom:1px;
+}
+/* 菜单栏展开项 */
+QMenu
+{
+    background-color: white;
+    /* border: 1px solid #76797C; */
+    color: #323232;
+    margin: 2px;
+}
+
+QMenu::icon
+{
+    /*margin: 5px;*/
+}
+
+QMenu::item
+{
+    padding: 2px 30px 2px 30px;
+    /*margin-left: 5px;*/
+    border: 1px solid transparent; /* reserve space for selection border */
+}
+
+QMenu::item:selected
+{
+    color: black;
+    background-color: #b4b4bb;
+    border: 2px solid #585858;
+    border-radius: 4px;
+}
+
+QMenu::separator {
+    height: 2px;
+    background: #b4b4bb;
+    margin-left: 10px;
+    margin-right: 5px;
+}
+
+QMenu::indicator {
+    margin-left: 10px;
+    width: 18px;
+    height: 18px;
+}
+
+/* non-exclusive indicator = check box style indicator (see QActionGroup::setExclusive) */
+/* 菜单栏状态ico */
+QMenu::indicator:non-exclusive:unchecked {
+    image: url(:/img/qss_icons/rc/checkbox_unchecked.png);
+}
+
+QMenu::indicator:non-exclusive:unchecked:selected {
+    image: url(:/img/qss_icons/rc/checkbox_unchecked_disabled.png);
+}
+
+QMenu::indicator:non-exclusive:checked {
+    image: url(:/img/qss_icons/rc/checkbox_checked.png);
+}
+
+QMenu::indicator:non-exclusive:checked:selected {
+    image: url(:/img/qss_icons/rc/checkbox_checked_disabled.png);
+}
+
+/* exclusive indicator = radio button style indicator (see QActionGroup::setExclusive) */
+
+QMenu::indicator:exclusive:unchecked {
+    image: url(:/img/qss_icons/rc/radio_unchecked.png);
+}
+
+QMenu::indicator:exclusive:unchecked:selected {
+    image: url(:/img/qss_icons/rc/radio_unchecked_disabled.png);
+}
+
+QMenu::indicator:exclusive:checked {
+    image: url(:/img/qss_icons/rc/radio_checked.png);
+}
+
+QMenu::indicator:exclusive:checked:selected {
+    image: url(:/img/qss_icons/rc/radio_checked_disabled.png);
+}
+
+QMenu::right-arrow {
+    margin: 5px;
+    image: url(:/img/qss_icons/rc/rightarrow.png)
+}
+
+/* 单元格大小选择框 */
+QComboBox:hover,QPushButton:hover,QAbstractSpinBox:hover,QLineEdit:hover,QTextEdit:hover,QPlainTextEdit:hover,QAbstractView:hover,QTreeView:hover
+{
+    border: 1px solid #787878;
+}
+
+QComboBox:on
+{
+    padding-top: 0px;
+    padding-left: 4px;
+    selection-background-color: white;
+}
+
+QComboBox QAbstractItemView
+{
+    /* background-color: #1e1e1e; */
+    border-radius: 2px;
+    border: 1px solid #585858;
+    selection-background-color: #b4b4bb;
+}
+
+QComboBox::drop-down
+{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+
+    border-left-width: 0px;
+    border-left-color: darkgray;
+    border-left-style: solid;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow
+{
+    image: url(:/img/qss_icons/rc/down_arrow_disabled.png);
+}
+
+QComboBox::down-arrow:on, QComboBox::down-arrow:hover, QComboBox::down-arrow:focus
+{
+    image: url(:/img/qss_icons/rc/down_arrow_disabled.png);
+}
+/* 提示框样式 */
+QMessageBox {
+        background-color: #F2F2F2; /* QMessageBox背景颜色 */
+        border-radius: 10px;
+}
+
+QMessageBox QLabel#qt_msgbox_label { /* textLabel */
+        color: #323232;
+        background-color: transparent;
+        /* min-width: 150px; /* textLabel设置最小宽度可以相应的改变QMessageBox的最小宽度 */*/
+        min-height: 30px; /* textLabel和iconLabel高度保持一致 */
+        border-radius: 10px;
+}
+
+QMessageBox QLabel#qt_msgboxex_icon_label { /* iconLabel */
+        width: 30px;
+        height: 30px; /* textLabel和iconLabel高度保持一致 */
+}
+
