@@ -16,7 +16,7 @@
 
 ## Interface
 
-![Interface](./README/RDME_IMG/Interface.jpg)
+![Interface](./README/RDME_IMG/界面.jpg)
 
 ## Installation&packaging
 
@@ -78,44 +78,44 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 
 In this project, you can freely set the length and width of the map, and the cells have four status options:
 
-![Set Map](./README/RDME_IMG/Astar_gif/Set Map.gif)
+![Set Map](./README/RDME_IMG/Astar_gif/设置地图.gif)
 
 - Optimize Astar algorithm
 
 Demonstration of one of the optimization A-star algorithms, and this project supports the use of **Bezier curve** as the UAV path trajectory:
 
-![Astar algorithm demonstration](./README/RDME_IMG/Astar_gif/Astar&Bezier.gif)
+![Astar algorithm demonstration](./README/RDME_IMG/Astar_gif/A星&贝塞尔.gif)
 
 - Generate random maps & reset map data
 
 Supports generating random maps (the generation logic is relatively simple, using pseudo-random number generation, the generation logic here can be optimized during secondary development) and resetting map parameters with one click:
 
-![Random Map](./README/RDME_IMG/Astar_gif/Random Map.gif)
+![Random Map](./README/RDME_IMG/Astar_gif/随机地图.gif)
 
 - Save map locally
 
 Considering the presentation part of the project, it is impossible to draw the map on site, so this project supports saving the map locally:
 
-![Save Map](./README/RDME_IMG/Astar_gif/Save Map.gif)
+![Save Map](./README/RDME_IMG/Astar_gif/保存地图.gif)
 
 - Open local map & depth first algorithm demonstration
 
 Open the saved .Amap file to demonstrate the depth-first algorithm. Press `deep search for shortest` to get the shortest path among all the paths obtained by deep search. (There is no problem with the deep search implementation, but you need to pay attention to the operation step by step, otherwise it is easy to cause errors. bug):
 
-![Open map](./README/RDME_IMG/Astar_gif/deep search.gif)
+![Open map](./README/RDME_IMG/Astar_gif/深搜.gif)
 
 - Import background images
 
 Import the picture as the background and draw the map (it is recommended to develop rasterization during secondary development):
 
-![Background Image](./README/RDME_IMG/Astar_gif/Open & Clear Background.gif)
+![Background Image](./README/RDME_IMG/Astar_gif/打开&清除背景.gif)
 
 - other
 
 There are also many small details (about page, visual performance analysis, operation prompt box, footer status bar, enter fade in and out...):
 
-![Others](./README/RDME_IMG/Astar_gif/Others.gif)
+![Others](./README/RDME_IMG/Astar_gif/其他.gif)
 
-## Other
+## Others
 
 The project is used for school curriculum, so some ico icons are related to NWPU. In addition, there are still many irregularities in the project production. There are many small details but also many bugs. There is also a bit of history... Please bear with me.
