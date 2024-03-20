@@ -135,4 +135,4 @@ The project is used for school curriculum, so some ico icons are related to NWPU
 
 ## Star History
 
-![star](https://star-history.com/#/LJJbyZJU&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=LJJbyZJU/A-star&type=Date)](https://star-history.com/#LJJbyZJU/A-star&Date)
