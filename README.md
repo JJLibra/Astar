@@ -4,16 +4,10 @@
 
 ## README.md
 
-- de_DE [Deutsch](README/README.de_DE.md)
 - en [English](README.md)
-- es_ES [Español](README/README.es_ES.md)
-- fr_FR [Français](README/README.fr_FR.md)
-- hy [Հայերեն](README/README.hy.md)
-- pt_BR [Português do Brasil](README/README.pt_BR.md)
-- ru [Русский](README/README.ru.md)
-- sv_SE [Svenska](README/README.sv_SE.md)
 - zh_CN [简体中文](README/README.zh_CN.md)
 - zh_TW [繁体中文](README/README.zh_TW.md)
+- de_DE [Deutsch](README/README.de_DE.md)
 
 ## Table of contents
 
