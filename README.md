@@ -2,6 +2,19 @@
 
 ## Algorithm Demonstration: UAV Path Search and Optimization
 
+## README.md
+
+- de_DE [Deutsch](readme/README.de_DE.md)
+- en [English](README.md)
+- es_ES [Español](readme/README.es_ES.md)
+- fr_FR [Français](readme/README.fr_FR.md)
+- hy [Հայերեն](readme/README.hy.md)
+- pt_BR [Português do Brasil](readme/README.pt_BR.md)
+- ru [Русский](readme/README.ru.md)
+- sv_SE [Svenska](readme/README.sv_SE.md)
+- zh_CN [简体中文](readme/README.zh_CN.md)
+- zh_TW [繁体中文](readme/README.zh_TW.md)
+
 ## Table of contents
 
 [Run interface](#Interface)
@@ -16,7 +29,7 @@
 
 ## Interface
 
-![Interface](./README/RDME_IMG/界面.jpg)
+![Interface](./readme/RDME_IMG/界面.jpg)
 
 ## Installation&packaging
 
@@ -36,7 +49,7 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 
 ### Interface
 
-```
+```markdown
 1. Customize map width and height
 2. Adjustable map cell size
 3. Customize starting point, end point, and obstacles
@@ -54,7 +67,7 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 
 ### Algorithm
 
-```
+```markdown
 1. Depth-first search algorithm
 2. Breadth-first search algorithm
 3. Dijkstra’s algorithm
@@ -64,7 +77,7 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 7. Optimize A-star algorithm
     - Three distance calculations define estimated distance h
        - Chebyshev distance
-       -Manhattan distance
+       - Manhattan distance
        - Euclidean distance
     - Overall dynamic weighting dynamic
     - Custom corner weight penalty
@@ -78,43 +91,43 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 
 In this project, you can freely set the length and width of the map, and the cells have four status options:
 
-![Set Map](./README/RDME_IMG/Astar_gif/设置地图.gif)
+![Set Map](./readme/RDME_IMG/Astar_gif/设置地图.gif)
 
 - Optimize Astar algorithm
 
 Demonstration of one of the optimization A-star algorithms, and this project supports the use of **Bezier curve** as the UAV path trajectory:
 
-![Astar algorithm demonstration](./README/RDME_IMG/Astar_gif/A星&贝塞尔.gif)
+![Astar algorithm demonstration](./readme/RDME_IMG/Astar_gif/A星&贝塞尔.gif)
 
 - Generate random maps & reset map data
 
 Supports generating random maps (the generation logic is relatively simple, using pseudo-random number generation, the generation logic here can be optimized during secondary development) and resetting map parameters with one click:
 
-![Random Map](./README/RDME_IMG/Astar_gif/随机地图.gif)
+![Random Map](./readme/RDME_IMG/Astar_gif/随机地图.gif)
 
 - Save map locally
 
 Considering the presentation part of the project, it is impossible to draw the map on site, so this project supports saving the map locally:
 
-![Save Map](./README/RDME_IMG/Astar_gif/保存地图.gif)
+![Save Map](./readme/RDME_IMG/Astar_gif/保存地图.gif)
 
 - Open local map & depth first algorithm demonstration
 
 Open the saved .Amap file to demonstrate the depth-first algorithm. Press `deep search for shortest` to get the shortest path among all the paths obtained by deep search. (There is no problem with the deep search implementation, but you need to pay attention to the operation step by step, otherwise it is easy to cause errors. bug):
 
-![Open map](./README/RDME_IMG/Astar_gif/深搜.gif)
+![Open map](./readme/RDME_IMG/Astar_gif/深搜.gif)
 
 - Import background images
 
 Import the picture as the background and draw the map (it is recommended to develop rasterization during secondary development):
 
-![Background Image](./README/RDME_IMG/Astar_gif/打开&清除背景.gif)
+![Background Image](./readme/RDME_IMG/Astar_gif/打开&清除背景.gif)
 
 - other
 
 There are also many small details (about page, visual performance analysis, operation prompt box, footer status bar, enter fade in and out...):
 
-![Others](./README/RDME_IMG/Astar_gif/其他.gif)
+![Others](./readme/RDME_IMG/Astar_gif/其他.gif)
 
 ## Others
 
