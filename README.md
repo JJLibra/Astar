@@ -4,7 +4,7 @@
     </a>
 </p>
 
-<h1 align="center">Astar algorithm demonstrator - UAV path planning</h1>
+<h1 align="center">Astar —— UAV path planning</h1>
 
 <p align="center">
     <a target="_blank" href="https://github.com/LJJbyZJU">
