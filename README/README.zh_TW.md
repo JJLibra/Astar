@@ -4,7 +4,7 @@
     </a>
 </p>
 
-<h1 align="center">cz-git</h1>
+<h1 align="center">Astar算法演示器——無人機路徑規劃</h1>
 
 <p align="center">
     <a target="_blank" href="https://github.com/LJJbyZJU">

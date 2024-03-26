@@ -4,7 +4,7 @@
     </a>
 </p>
 
-<h1 align="center">cz-git</h1>
+<h1 align="center">Astar-Algorithmus-Demonstrator – UAV-Pfadplanung</h1>
 
 <p align="center">
     <a target="_blank" href="https://github.com/LJJbyZJU">

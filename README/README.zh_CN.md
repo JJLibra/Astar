@@ -4,7 +4,7 @@
     </a>
 </p>
 
-<h1 align="center">cz-git</h1>
+<h1 align="center">Astar算法演示器——无人机路径规划</h1>
 
 <p align="center">
     <a target="_blank" href="https://github.com/LJJbyZJU">
@@ -28,9 +28,7 @@
     <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.de_DE.md">德语文档</a>
 </p>
 
-## 📚 算法演示：无人机路径搜索和优化
-
-## 目录
+## 📇 目录
 
 [运行界面](#运行界面)
 
