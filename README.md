@@ -148,12 +148,12 @@ The project is used for school curriculum, so some ico icons are related to NWPU
 
 ## 🤩 Star History
 
-<a href="https://star-history.com/#LJJbyZJU/A-star&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=LJJbyZJU/A-star&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=LJJbyZJU/A-star&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=LJJbyZJU/A-star&type=Date" />
-  </picture>
+<a href="https://star-history.com/#JJLibra/Astar&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=JJLibra/Astar&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=JJLibra/Astar&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=JJLibra/Astar&type=Date" />
+ </picture>
 </a>
 
 [top](#A-star)
