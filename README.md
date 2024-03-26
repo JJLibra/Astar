@@ -1,6 +1,6 @@
 # A-star
 
-## Algorithm Demonstration: UAV Path Search and Optimization
+## 📚 Algorithm Demonstration: UAV Path Search and Optimization
 
 ## README.md
 
@@ -21,11 +21,11 @@
 
 [Other instructions](#Other)
 
-## Interface
+## 🤖 Interface
 
 ![Interface](./README/RDME_IMG/界面.jpg)
 
-## Installation&packaging
+## 🚀 Installation&packaging
 
 This project is developed using C++ based on the QT framework
 
@@ -39,7 +39,7 @@ It is recommended to install QT creator and open the Astar.pro file for editing.
 
 I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.csdn.net/qq_40994692/article/details/113880198)
 
-## Features
+## 💻 Features
 
 ### Interface
 
@@ -79,7 +79,7 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
 8. Three incremental search algorithms (not perfect enough, not recommended)
 ```
 
-## Partial-demonstration
+## 🤝 Partial-demonstration
 
 - Customize map parameters
 
@@ -123,7 +123,7 @@ There are also many small details (about page, visual performance analysis, oper
 
 ![Others](./README/RDME_IMG/Astar_gif/其他.gif)
 
-## Others
+## 📝 Others
 
 The project is used for school curriculum, so some ico icons are related to NWPU. In addition, there are still many irregularities in the project production. There are many small details but also many bugs. There is also a bit of history... Please bear with me.
 

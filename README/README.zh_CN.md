@@ -1,6 +1,6 @@
 # A-star
 
-## 算法演示：无人机路径搜索和优化
+## 📚 算法演示：无人机路径搜索和优化
 
 ## 目录
 
@@ -14,11 +14,11 @@
 
 [其他说明](#其他说明)
 
-## 运行界面
+## 🤖 运行界面
 
 ![界面](./RDME_IMG/界面.jpg)
 
-## 安装与打包
+## 🚀 安装与打包
 
 本项目基于 QT 框架使用 C++ 开发
 
@@ -32,7 +32,7 @@ git clone git@github.com:LJJbyZJU/A-star.git
 
 我使用的是 Enigma Virtual Box 打包，可以[参考这篇博客](https://blog.csdn.net/qq_40994692/article/details/113880198)
 
-## 功能介绍
+## 💻 功能介绍
 
 ### 界面
 
@@ -72,7 +72,7 @@ git clone git@github.com:LJJbyZJU/A-star.git
 8. 三种增量式搜索算法（还不够完善，不建议使用）
 ```
 
-## 部分演示
+## 🤝 部分演示
 
 - 自定义地图参数
 
@@ -116,7 +116,7 @@ git clone git@github.com:LJJbyZJU/A-star.git
 
 ![其他](./RDME_IMG/Astar_gif/其他.gif)
 
-## 其他说明
+## 📝 其他说明
 
 项目用于学校的课设，所以一些 ico 图标都与 NWPU 相关。另外，项目制作时还是有很多不规范的地方，小细节有不少但是bug也不少，还有点史山...大家多多包涵。
 
