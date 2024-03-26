@@ -1,6 +1,32 @@
-# A-Stern
+<p align="center">
+    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
+        <img src="https://user-images.githubusercontent.com/40693636/154064210-964aeaa0-d9dc-4cea-9e52-2ffc3789611b.png" alt="astar-logo" width="400" data-width="400" data-height="400">
+    </a>
+</p>
 
-## Algorithmus-Demonstration: UAV-Pfadsuche und Optimierung
+<h1 align="center">cz-git</h1>
+
+<p align="center">
+    <a target="_blank" href="https://github.com/LJJbyZJU">
+      <img style="display:inline-block;margin:0.2em;" alt="Author" src="https://img.shields.io/badge/Author-Junjie Li-blue.svg?logo=autoit&style=flat">
+    </a>
+    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
+      <img style="display:inline-block;margin:0.2em;" alt="GitHub Repo stars" src="https://img.shields.io/github/stars/LJJbyZJU/Astar?style=social">
+    </a>
+    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
+      <img style="display:inline-block;margin:0.2em;" alt="Qt" src="https://img.shields.io/badge/Framework-Qt-green.svg?logo=Qt&style=flat">
+    </a>
+</p>
+
+<p align="center">
+    <a href="https://github.com/LJJbyZJU/Astar">GitHub</a>
+    &nbsp; | &nbsp;
+    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.zh_CN.md">简体中文文档</a>
+    &nbsp; | &nbsp;
+    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.zh_TW.md">繁体中文文档</a>
+    &nbsp; | &nbsp;
+    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.de_DE.md">Deutsch</a>
+</p>
 
 ## Katalog
 
