@@ -1,6 +1,6 @@
 <p align="center">
     <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
-        <img src="https://github.com/LJJbyZJU/Astar/blob/main/README/RDME_IMG/purchase.png" alt="astar-logo" width="400" data-width="400" data-height="400">
+        <img src="https://github.com/LJJbyZJU/Astar/blob/main/README/RDME_IMG/purchase.png" alt="astar-logo" width="200" data-width="200" data-height="200">
     </a>
 </p>
 
