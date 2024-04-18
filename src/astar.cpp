@@ -15,6 +15,7 @@
 #include<QElapsedTimer>
 #include<QMessageBox>
 #include<QThread>
+#include <algorithm>
 
 //时间信息
 double BfsTime;
@@ -66,76 +67,6 @@ Astar::Astar(const QString &text, QWidget *parent,int width,int height,int recta
     dynamic=1;
     bezierNum=10;
 }
-//bool israndOK;
-void Astar::testNewmap(){
-    //遍历阵列中的节点，初始化节点信息
-    for(int i=1; i<=h; i++){
-        for(int j=1; j<=w; j++){
-            anode[i][j].g=0;
-            anode[i][j].x=i;
-            anode[i][j].y=j;
-
-            if(status[i][j]==0){ //空白 表示可以正常通行
-                anode[i][j].isClosed=false;
-                anode[i][j].visited=false;  //初始化访问情况
-            }
-            if(status[i][j]==1 or status[i][j]==2){ //1代表障碍 2代表起点
-                anode[i][j].isClosed=true;
-                anode[i][j].visited=true;
-            }
-        }
-    }
-
-    //记录起点、终点的坐标信息
-    startx=1;
-    starty=1;
-    endx=w;
-    endy=h;
-
-    //现已初始化节点信息列表，开始获取最短路径
-    Astarnode current;  //表示当前节点
-    int optrx;
-    int optry;
-    current=anode[startx][starty];  //从起点开始
-
-    QQueue<Astarnode> q; //定义一个队列
-    bool visited[h+1][w+1];
-    memset(visited, false, sizeof(visited));
-    q.enqueue(anode[startx][starty]);
-    visited[startx][starty] = true;
-    while (!q.empty()) {
-        current = q.front();
-        q.dequeue();
-        if (current.x == endx && current.y == endy)
-        {
-            int queuelen=q.size();
-            for(int i=0;i<queuelen;i++)
-            {
-                current = q.front();
-                q.dequeue();
-                status[current.x][current.y]=7; //队列中的待扩展点
-            }
-            break;
-        }
-        for (int i = 1; i <= 4; i++) {
-            optrx = current.x + ((i + 1) % 2) * (i - 3);
-            optry = current.y + (i % 2) * (i - 2);
-            if (optrx <= 0 or optrx > h or optry <= 0 or optry > w) continue;
-            if (anode[optrx][optry].isClosed) continue;
-            if (!visited[optrx][optry]) {
-                q.enqueue(anode[optrx][optry]);
-                visited[optrx][optry] = true;
-                status[optrx][optry]=5;
-                count++;
-                anode[optrx][optry].lastpoint.setX(current.x);
-                anode[optrx][optry].lastpoint.setY(current.y);
-            }
-        }
-    }
-    issolved=true;
-    shutevent=true;
-    updateandpaint();
-}
 void Astar::createRandmap(){
     unsigned seed;
     seed = time(0);
@@ -152,86 +83,50 @@ void Astar::createRandmap(){
     }
     mapl->setPixmap(mappic);
 }
+// 消息弹窗封装
+void Astar::showMessage(const QString &message, const QString &iconPath = ":/img/caution.png") {
+    QMessageBox messagebox(this);
+    messagebox.setText(message);
+    messagebox.setIconPixmap(QPixmap(iconPath).scaled(30, 30));
+    messagebox.setStandardButtons(QMessageBox::NoButton);
+    messagebox.setWindowFlag(Qt::FramelessWindowHint);
+    QLabel *textLabel = messagebox.findChild<QLabel*>("qt_msgbox_label");
+    if (textLabel) {
+        textLabel->setAlignment(Qt::AlignCenter);
+    }
+    messagebox.show();
+
+    QElapsedTimer timer;
+    timer.start();
+    while(timer.elapsed() < 500) {
+        QApplication::processEvents();
+    }
+
+    QPropertyAnimation *animation = new QPropertyAnimation(&messagebox, "geometry");
+    animation->setDuration(500);
+    animation->setStartValue(messagebox.geometry());
+    animation->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
+    animation->start();
+
+    QPropertyAnimation *fadeAnimation = new QPropertyAnimation(&messagebox, "windowOpacity");
+    fadeAnimation->setDuration(500);
+    fadeAnimation->setStartValue(1);
+    fadeAnimation->setEndValue(0);
+    fadeAnimation->start();
+
+    timer.restart();
+    while(timer.elapsed() < 500) {
+        QApplication::processEvents();
+    }
+}
 //核心函数
 void Astar::runAstar(){
     if(issolved){
-        //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
-        QMessageBox messagebox(this);
-        messagebox.setText("请先清除当前路径哦~");
-        messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-        messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-        messagebox.setWindowFlag(Qt::FramelessWindowHint);
-        QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-        if (textlabel)
-        {
-            textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-        }
-        messagebox.show();
-        //延迟
-        QElapsedTimer t1;
-        t1.start();
-        while(t1.elapsed() < 500)
-        {
-            QApplication::processEvents();
-        }
-        QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-        animation1->setDuration(500);
-        animation1->setStartValue(messagebox.geometry());
-        animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-        animation1->start();
-        QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-        animation2->setDuration(500);
-        animation2->setStartValue(1);
-        animation2->setEndValue(0);
-        animation2->start();
-        //延迟
-        QElapsedTimer t2;
-        t2.start();
-        while(t2.elapsed() < 500)
-        {
-            QApplication::processEvents();
-        }
+        showMessage("请先清除当前路径哦~");
         return;
     }
     if(start->isNull() or end->isNull()){
-        if(!isAnalysis){
-            //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
-            QMessageBox messagebox(this);
-            messagebox.setText("先设置起点和终点哦~");
-            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-            messagebox.setWindowFlag(Qt::FramelessWindowHint);
-            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-            if (textlabel)
-            {
-                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-            }
-            messagebox.show();
-            //延迟
-            QElapsedTimer t1;
-            t1.start();
-            while(t1.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-            animation1->setDuration(500);
-            animation1->setStartValue(messagebox.geometry());
-            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-            animation1->start();
-            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-            animation2->setDuration(500);
-            animation2->setStartValue(1);
-            animation2->setEndValue(0);
-            animation2->start();
-            //延迟
-            QElapsedTimer t2;
-            t2.start();
-            while(t2.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-        }
+        if(!isAnalysis) showMessage("先设置起点和终点哦~");
         return;
     }
 
@@ -245,82 +140,9 @@ void Astar::runAstar(){
     endy=end->y();
 
     //遍历阵列中的节点，初始化节点信息
-    for(int i=1; i<=h; i++){
-        for(int j=1; j<=w; j++){
-            anode[i][j].g=0;
-            anode[i][j].gda=0;
-            anode[i][j].blocks=0;
-            anode[i][j].dfs=0;
-            anode[i][j].pathflag=0;
-
-            switch(hfunc){  //选择预估距离计算公式
-            case 1: //优化A* 切比雪夫
-                anode[i][j].h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
-                break;
-            case 2: //优化A* 曼哈顿
-                anode[i][j].h=(abs(i-endx)+abs(j-endy))*10;
-                break;
-            case 3: //优化A* 欧式距离
-                anode[i][j].h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
-                break;
-            case 7: //传统A* 欧式距离
-                anode[i][j].h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
-                break;
-            case 8: //传统A* 曼哈顿
-                anode[i][j].h=(abs(i-endx)+abs(j-endy))*10;
-                break;
-            case 9: //传统A* 切比雪夫
-                anode[i][j].h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
-                break;
-            case 10: //双向A* 欧式距离
-                anode[i][j].h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
-                anode[i][j].hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
-                break;
-            case 11: //双向A* 曼哈顿
-                anode[i][j].h=(abs(i-endx)+abs(j-endy))*10;
-                anode[i][j].hda=(abs(i-startx)+abs(j-starty))*10;
-                break;
-            case 12: //双向A* 切比雪夫
-                anode[i][j].h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
-                anode[i][j].hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
-                break;
-            case 14: //GBFS 使用欧式距离
-                anode[i][j].h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
-                break;
-            case 23: //Dijkstra
-                anode[i][j].h=0;
-                break;
-            }
-
-            anode[i][j].cost=anode[i][j].h; //因为初始g都为0，所以不需要加，cost等于预估距离即可
-            anode[i][j].costDA=anode[i][j].hda;
-            anode[i][j].x=i;
-            anode[i][j].y=j;
-            anode[i][j].isInOpenList=false;
-            anode[i][j].isInDAOpenList=false;
-            if(factor==1){  //计算各点障碍数
-                for(int op=1; op<=4; op++){
-                    int optrx=i+((op+1)%2)*(op-3);
-                    int optry=j+(op%2)*(op-2);
-                    if(status[optrx][optry]==0) continue;
-                    else if(status[optrx][optry]==1 or status[optrx][optry]==2){
-                        anode[i][j].blocks++;
-                    }
-                }
-            }
-            if(status[i][j]==0){ //空白 表示可以正常通行
-                anode[i][j].isClosed=false;
-                anode[i][j].isClosedDA=false;
-                anode[i][j].visited=false;  //初始化访问情况
-            }
-            if(status[i][j]==1 or status[i][j]==2){ //1代表障碍 2代表起点
-                anode[i][j].isClosed=true;
-                anode[i][j].visited=true;
-                anode[i][j].dfs=1;
-            }
-            if(status[i][j]==1 or status[i][j]==3){ //3代表终点
-                anode[i][j].isClosedDA=true;
-            }
+    for(int i = 1; i <= h; i++) {
+        for(int j = 1; j <= w; j++) {
+            initializeNode(anode[i][j], i, j);
         }
     }
     straight=sqrt(((int)pow(startx-endx,2)+(int)pow(starty-endy,2)))*10;
@@ -333,25 +155,12 @@ void Astar::runAstar(){
     int DAoptry;
     current=anode[startx][starty];  //从起点开始
     currentDA=anode[endx][endy]; //从终点开始
-
-    if(hfunc == 4){ //dfs
-        path.clear(); //清空列表
-        QList<Astarnode> p;
-        isoverflow=false;
-        dfs(startx, starty, p, 0); //初始路径长度为0
-        isdfssolved=true;
-        if(isdfssolved)
-        {
-            if(isoverflow){
-                dfsPathNum=-1;
-                return; //出现溢出 返回
-            }
-            dfsPathNum=path.size();
-            dfs_updateandpaint(path,0);
-        }
-    }
-
-    if(hfunc == 5){ //bfs
+    //各模式算法
+    switch (hfunc) {
+    case 4:  // DFS
+        runDFS();
+        break;
+    case 5:  // BFS
         QElapsedTimer time;
         time.start();
         count=0;
@@ -397,12 +206,7 @@ void Astar::runAstar(){
         bfstime=bfstime/pow(10,6);
         BfsTime=bfstime;
         BfsExtend=count;
-        //QMessageBox bfs_time;
-        //double bfs=time.nsecsElapsed();
-        //bfs_time.setWindowTitle("Dijkstra算法运行时间");
-        //bfs_time.setText(QString("用时%1ms").arg(bfs));
-        //bfs_time.setStandardButtons(QMessageBox::Ok);
-        //bfs_time.exec();
+        break;
     }
 
     if(hfunc==1 or hfunc==2 or hfunc==3) //优化A*
@@ -560,11 +364,6 @@ void Astar::runAstar(){
             yydsAstarEuTime=astar;
             yydsAstarEuExtend=count;
         }
-//        QMessageBox astar_time;
-//        astar_time.setWindowTitle("优化A*运行时间");
-//        astar_time.setText(QString("用时%1ms").arg(astar));
-//        astar_time.setStandardButtons(QMessageBox::Ok);
-//        astar_time.exec();
     }
 
     if(hfunc==7 or hfunc==8 or hfunc==9) //传统A*
@@ -652,11 +451,6 @@ void Astar::runAstar(){
             normalAstarDiaTime=astar;
             normalAstarDiaExtend=count;
         }
-//        QMessageBox astar_time;
-//        astar_time.setWindowTitle("传统A*运行时间");
-//        astar_time.setText(QString("用时%1ms").arg(astar));
-//        astar_time.setStandardButtons(QMessageBox::Ok);
-//        astar_time.exec();
     }
 
     if(hfunc==10 or hfunc==11 or hfunc==12) //双向A*
@@ -837,11 +631,6 @@ void Astar::runAstar(){
             doubleAstarDiaTime=astar;
             doubleAstarDiaExtend=count;
         }
-//        QMessageBox astar_time;
-//        astar_time.setWindowTitle("双向A*运行时间");
-//        astar_time.setText(QString("用时%1ms").arg(astar));
-//        astar_time.setStandardButtons(QMessageBox::Ok);
-//        astar_time.exec();
     }
 
     if(hfunc==14) //最佳优先搜索GBFS
@@ -981,6 +770,95 @@ void Astar::runAstar(){
         DijkstraExtend=count;
     }
 }
+void Astar::runDFS() {
+    path.clear(); //清空列表
+    QList<Astarnode> p;
+    isoverflow = false;
+    dfs(startx, starty, p, 0); //初始路径长度为0
+    isdfssolved = true;
+    if (isdfssolved) {
+        if (isoverflow) {
+            dfsPathNum = -1;
+            return; // 出现溢出 返回
+        }
+        dfsPathNum = path.size();
+        dfs_updateandpaint(path, 0);
+    }
+}
+
+void Astar::initializeNode(Astarnode& node, int i, int j) {
+    node.g = 0;
+    node.gda = 0;
+    node.blocks = 0;
+    node.dfs = 0;
+    node.pathflag = 0;
+    node.isInOpenList = false;
+    node.isInDAOpenList = false;
+    node.x = i;
+    node.y = j;
+
+    // Compute heuristic based on the function selected
+    switch(hfunc) {
+    case 1: // Chebyshev distance optimized A*
+        node.h = std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
+        break;
+    case 2: // Manhattan distance optimized A*
+        node.h = (abs(i - endx) + abs(j - endy)) * 10;
+        break;
+    case 3: // Euclidean distance optimized A*
+        node.h = sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
+        break;
+    default:
+        node.h = calculateHeuristic(i, j);
+        break;
+    }
+
+    if(factor == 1) calculateBlocks(node, i, j);
+
+    node.cost = node.h; // Assuming initial g is 0, cost is just h
+    node.costDA = node.hda; // For bidirectional A*
+
+    node.isClosed = (status[i][j] == 1 || status[i][j] == 2);
+    node.isClosedDA = (status[i][j] == 1 || status[i][j] == 3);
+    node.visited = node.isClosed;
+}
+
+double Astar::calculateHeuristic(int i, int j) {
+    switch(hfunc) {
+    case 7: // Traditional A* Euclidean distance
+        return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
+    case 8: // Traditional A* Manhattan
+        return (abs(i - endx) + abs(j - endy)) * 10;
+    case 9: // Traditional A* Chebyshev
+        return std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
+    case 10: // Bi-directional A* Euclidean
+        return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
+    // Additional cases as necessary
+    default:
+        return 0; // Or an appropriate default for unknown hfunc
+    }
+}
+
+void Astar::calculateBlocks(Astarnode& node, int x, int y) {
+    int blockCount = 0;
+    // 检查周围四个方向的障碍情况
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0) continue;  // 跳过自身位置
+            int nx = x + dx;
+            int ny = y + dy;
+            // 检查边界条件
+            if (nx > 0 && nx <= h && ny > 0 && ny <= w) {
+                // 假设status是一个存储地图状态的二维数组，其中1表示障碍
+                if (status[nx][ny] == 1) {
+                    blockCount++;
+                }
+            }
+        }
+    }
+    node.blocks = blockCount;
+}
+
 void Astar::Initialize(){
     //先清除扩展点列表
     openlist.clear();

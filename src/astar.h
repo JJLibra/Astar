@@ -82,7 +82,14 @@ protected:
 public:
     Astar(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30); //定义Astar类的属性：text用来接收地图信息、width，height分别表示阵列的宽高、rectaa表示单元格的边长
     void createRandmap();
+    void initializeNode(Astarnode& node, int i, int j);
+    double calculateHeuristic(int i, int j);
+    void calculateBlocks(Astarnode& node, int x, int y);
+    void expandNode(Astarnode& current, std::function<void(Astarnode&, Astarnode&)> updateNeighbor);
+    void processRemainingQueue(QQueue<Astarnode> &queue);
+    void runBFS();
     void runAstar();    //A*算法的主体函数
+    void runDFS();
     void runLPAstar();  //LPA*算法
     void runDstar();  //D*算法
     void runDlitestar();  //D*lite算法
@@ -114,6 +121,7 @@ private:
     int endy;
     int count=0; //用于记录搜索范围
     void testNewmap();
+    void showMessage(const QString &message, const QString &iconPath);
     void dfs(int x ,int y ,QList<Astarnode>& p,int plen);
     void updateandpaint();
     void dfs_updateandpaint(QList<QList<Astarnode>> path,int index);
