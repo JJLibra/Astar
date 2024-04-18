@@ -33,7 +33,7 @@ AboutDialog::AboutDialog(QWidget *parent){
     QLabel *text6=new QLabel();
 
     text4->setOpenExternalLinks(true);
-    text4->setText("<a style='color:#3cbdff;' href=\"https://github.com/LJJbyZJU\">Github:@LJJ@NWPU");
+    text4->setText("<a style='color:#3cbdff;' href=\"https://github.com/JJLibra\">Github:@LJJ@NWPU");
     text4->setFont(QFont("SimSun",12));
 
     text6->setOpenExternalLinks(true);

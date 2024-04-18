@@ -86,5 +86,10 @@
         <file>img/loading1.gif</file>
         <file>img/loading2.gif</file>
         <file>img/question.png</file>
+        <file>img/loading3.gif</file>
+        <file>img/map.jpg</file>
+        <file>img/map1.jpg</file>
+        <file>img/nwpu_logo.jpg</file>
+        <file>img/workbench.ico</file>
     </qresource>
 </RCC>

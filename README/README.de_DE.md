@@ -1,31 +1,31 @@
 <p align="center">
-    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
-        <img src="https://github.com/LJJbyZJU/Astar/blob/main/README/RDME_IMG/purchase.png" alt="astar-logo" width="150" data-width="150" data-height="150">
+    <a target="_blank" href="https://github.com/JJLibra/Astar">
+        <img src="https://github.com/JJLibra/Astar/blob/main/README/RDME_IMG/purchase.png" alt="astar-logo" width="150" data-width="150" data-height="150">
     </a>
 </p>
 
 <h1 align="center">Astar-Algorithmus-Demonstrator – UAV-Pfadplanung</h1>
 
 <p align="center">
-    <a target="_blank" href="https://github.com/LJJbyZJU">
+    <a target="_blank" href="https://github.com/JJLibra">
       <img style="display:inline-block;margin:0.2em;" alt="Author" src="https://img.shields.io/badge/Author-Junjie Li-blue.svg?logo=autoit&style=flat">
     </a>
-    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
-      <img style="display:inline-block;margin:0.2em;" alt="GitHub Repo stars" src="https://img.shields.io/github/stars/LJJbyZJU/Astar?style=social">
+    <a target="_blank" href="https://github.com/JJLibra/Astar">
+      <img style="display:inline-block;margin:0.2em;" alt="GitHub Repo stars" src="https://img.shields.io/github/stars/JJLibra/Astar?style=social">
     </a>
-    <a target="_blank" href="https://github.com/LJJbyZJU/Astar">
+    <a target="_blank" href="https://github.com/JJLibra/Astar">
       <img style="display:inline-block;margin:0.2em;" alt="Qt" src="https://img.shields.io/badge/Framework-Qt-green.svg?logo=Qt&style=flat">
     </a>
 </p>
 
 <p align="center">
-    <a href="https://github.com/LJJbyZJU/Astar">GitHub</a>
+    <a href="https://github.com/JJLibra/Astar">GitHub</a>
     &nbsp; | &nbsp;
-    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.zh_CN.md">简体中文文档</a>
+    <a href="https://github.com/JJLibra/Astar/blob/main/README/README.zh_CN.md">简体中文文档</a>
     &nbsp; | &nbsp;
-    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.zh_TW.md">繁体中文文档</a>
+    <a href="https://github.com/JJLibra/Astar/blob/main/README/README.zh_TW.md">繁体中文文档</a>
     &nbsp; | &nbsp;
-    <a href="https://github.com/LJJbyZJU/Astar/blob/main/README/README.de_DE.md">Deutsch</a>
+    <a href="https://github.com/JJLibra/Astar/blob/main/README/README.de_DE.md">Deutsch</a>
 </p>
 
 ## Katalog
@@ -44,6 +44,12 @@
 
 ![Interface](./RDME_IMG/界面.jpg)
 
+## Vorsichtsmaßnahmen
+
+- Die Projektpfade müssen alle auf Englisch sein, sonst wird beim Build ein Fehler gemeldet
+- Das Symbol wird beim ersten Start möglicherweise nicht angezeigt. Möglicherweise war der Import nicht erfolgreich.
+Nachdem Sie das Projekt in QT Creator geöffnet haben, fügen Sie die Symboldatei unter „Ressourcen“ – „icon.qrc“ – „Vorhandene Datei hinzufügen“ erneut hinzu.
+
 ## Installation-und-Paketierung
 
 Dieses Projekt basiert auf dem QT-Framework und wurde in C++ entwickelt.
@@ -51,7 +57,7 @@ Dieses Projekt basiert auf dem QT-Framework und wurde in C++ entwickelt.
 Umgebung: Windows
 
 ```
-git clone git@github.com:LJJbyZJU/A-star.git
+git clone git@github.com:JJLibra/A-star.git
 ```
 
 Es wird empfohlen, den QT Creator zu installieren und die Datei Astar.pro zu öffnen, um sie zu bearbeiten.
