@@ -9,6 +9,7 @@
 #include <QPropertyAnimation>
 #include <cmath>
 #include <analysis.h>
+#include <queue>
 
 //单元格具有的属性
 struct Astarnode{
@@ -39,6 +40,14 @@ struct point{ //贝塞尔曲线节点
   int x;
   int y;
 };
+
+struct CompareNode {
+  bool operator()(const Astarnode& a, const Astarnode& b) const {
+      // 假设我们根据cost来比较两个节点，需要的话可以根据你的具体需求来调整
+      return a.cost > b.cost;
+  }
+};
+
 //时间信息
 extern double BfsTime;
 extern double DijkstraTime;
@@ -85,11 +94,14 @@ public:
     void initializeNode(Astarnode& node, int i, int j);
     double calculateHeuristic(int i, int j);
     void calculateBlocks(Astarnode& node, int x, int y);
-    void expandNode(Astarnode& current, std::function<void(Astarnode&, Astarnode&)> updateNeighbor);
-    void processRemainingQueue(QQueue<Astarnode> &queue);
-    void runBFS();
     void runAstar();    //A*算法的主体函数
     void runDFS();
+    void runBFS(Astarnode current);
+    void runGBFS(Astarnode current);
+    void runDijkstra(Astarnode current);
+    void runTraditionalAStar(Astarnode current);
+    void runOptimizeAstar(Astarnode current);
+    void runDoubleAstar(Astarnode current, Astarnode currentDA);
     void runLPAstar();  //LPA*算法
     void runDstar();  //D*算法
     void runDlitestar();  //D*lite算法

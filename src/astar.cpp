@@ -16,6 +16,10 @@
 #include<QMessageBox>
 #include<QThread>
 #include <algorithm>
+#include <queue>
+#include <vector>
+#include <functional>
+#include <QPoint>
 
 //时间信息
 double BfsTime;
@@ -53,6 +57,8 @@ int DliteExtend;
 
 //深搜
 int dfsPathNum;
+
+std::priority_queue<Astarnode, std::vector<Astarnode>, CompareNode> openList;
 
 Astar::Astar(const QString &text, QWidget *parent,int width,int height,int rectaa) : MapLabel(text,parent,width,height,rectaa){
     issolved=false;
@@ -149,627 +155,229 @@ void Astar::runAstar(){
 
     //现已初始化节点信息列表，开始获取最短路径
     Astarnode current,currentDA;  //表示当前节点
-    int optrx;
-    int optry;
-    int DAoptrx;
-    int DAoptry;
     current=anode[startx][starty];  //从起点开始
     currentDA=anode[endx][endy]; //从终点开始
+
     //各模式算法
     switch (hfunc) {
-    case 4:  // DFS
-        runDFS();
-        break;
-    case 5:  // BFS
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        QQueue<Astarnode> q; //定义一个队列
-        bool visited[h+1][w+1];
-        memset(visited, false, sizeof(visited));
-        q.enqueue(anode[startx][starty]);
-        visited[startx][starty] = true;
-        while (!q.empty()) {
-            current = q.front();
-            q.dequeue();
-            if (current.x == endx && current.y == endy)
-            {
-                int queuelen=q.size();
-                for(int i=0;i<queuelen;i++)
-                {
-                    current = q.front();
-                    q.dequeue();
-                    status[current.x][current.y]=7; //队列中的待扩展点
-                }
-                break;
-            }
-            for (int i = 1; i <= 4; i++) {
-                optrx = current.x + ((i + 1) % 2) * (i - 3);
-                optry = current.y + (i % 2) * (i - 2);
-                if (optrx <= 0 or optrx > h or optry <= 0 or optry > w) continue;
-                if (anode[optrx][optry].isClosed) continue;
-                if (!visited[optrx][optry]) {
-                    q.enqueue(anode[optrx][optry]);
-                    visited[optrx][optry] = true;
-                    status[optrx][optry]=5;
-                    count++;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                }
-            }
-        }
-        double bfstime=time.nsecsElapsed();
-        issolved=true;
-        shutevent=true;
-        updateandpaint();
-
-        bfstime=bfstime/pow(10,6);
-        BfsTime=bfstime;
-        BfsExtend=count;
-        break;
+        case 1:
+        case 2:
+        case 3:
+            runOptimizeAstar(current);
+            break;
+        case 4:
+            runDFS();
+            break;
+        case 5:
+            runBFS(current);
+            break;
+        case 7:
+        case 8:
+        case 9:
+            runTraditionalAStar(current);
+            break;
+        case 10:
+        case 11:
+        case 12:
+            runDoubleAstar(current, currentDA);
+            break;
+        case 14:
+            runGBFS(current);
+            break;
+        case 23:
+            runDijkstra(current);
+            break;
     }
+}
 
-    if(hfunc==1 or hfunc==2 or hfunc==3) //优化A*
-    {
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        while(1){
-            //dir=1为八方向，dir=2为四方向，八方向不用考虑拐角问题
-            if(dir!=2){ //八方向，同四方向理
-                for(int i=1; i<=4; i++){
-                    optrx=current.x+(i>=3?1:-1);
-                    optry=current.y+pow(-1,i);
-                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
-                    if(anode[optrx][optry].isClosed) continue;
-                    if(anode[optrx][optry].g==0){
-                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
-                        temp=double(anode[optrx][optry].h)/double(straight);
-                        if(temp>0.5){
-                            dynamic=1.3;
-                        }
-                        else{
-                            dynamic=1;
-                        }
-                        anode[optrx][optry].cost=anode[optrx][optry].g+dynamic*anode[optrx][optry].h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        putopenlist(openlist,anode[optrx][optry],1);
-                        anode[optrx][optry].isInOpenList=true;
-                    }
-                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
-                        anode[optrx][optry].g=current.g+14;
-                        temp=double(anode[optrx][optry].h)/double(straight);
-                        if(temp>0.5){
-                            dynamic=1.3;
-                        }
-                        else{
-                            dynamic=1;
-                        }
-                        anode[optrx][optry].cost=anode[optrx][optry].g+dynamic*anode[optrx][optry].h;  //f=g+dynamic*h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        resortopenlist(openlist,anode[optrx][optry],1);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
-                optrx=current.x+((i+1)%2)*(i-3);    //如果i是奇数，在x方向移动，y方向上不变
-                optry=current.y+(i%2)*(i-2);        //如果i是偶数，在y方向移动，x方向上不变
-                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
-                if(anode[optrx][optry].isClosed) continue;
-                int penalty = 0;
-                int alpha = 0;
-                int alpha_third =1;
-                if(factor==2 || factor==1 || factor==3){
-                    if(((factor == 2 || factor==3)and (current.lastpoint.x() - current.x) * (current.x - optrx) + (current.lastpoint.y() - current.y) * (current.y - optry) != 0)){
-                        penalty = penal;
-                    }
-                    //选择障碍数因子alpha
-                    if (factor == 1 || factor==3){
-                        switch (mode) {
-                        case 1: //静态alpha
-                            switch(current.blocks){
-                            case 0:
-                                alpha = -10;
-                                break;
-                            case 1:
-                                alpha = 1;
-                                break;
-                            case 2:
-                                alpha = 5;
-                                break;
-                            case 3:
-                                alpha = 10;
-                                break;
-                            case 4:
-                                alpha = 20;
-                                break;
-                            }
-                            break;
-                        case 2: //考虑相邻节点
-                            beta = current.blocks + anode[optrx][optry].blocks;
-                            alpha = beta*10;
-                            break;
-                        case 3: //动态获取
-                            alpha = 0;
-                            alpha_third = current.blocks;
-                            break;
-                        }
-                    }
-                }
-                if(anode[optrx][optry].g==0){ //新的扩展点
-                    anode[optrx][optry].g=current.g+10; //计算它的实际距离g
-                    temp=double(anode[optrx][optry].h)/double(straight);
-                    if(temp>0.5){
-                        dynamic=1.3;
-                    }
-                    else{
-                        dynamic=1;
-                    }
-                    anode[optrx][optry].cost=anode[optrx][optry].g+alpha_third*dynamic*anode[optrx][optry].h-penalty+alpha;   //f=g+h
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    putopenlist(openlist,anode[optrx][optry],1);  //将该相邻节点放入开放列表 开放列表存放可扩展节点
-                    anode[optrx][optry].isInOpenList=true;
-                }
-                //如果当前节点的花费比相邻节点少，可以继续在当前节点的相邻节点查找
-                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
-                    anode[optrx][optry].g=current.g+10;
-                    temp=double(anode[optrx][optry].h)/double(straight);
-                    if(temp>0.5){
-                        dynamic=1.3;
-                    }
-                    else{
-                        dynamic=1;
-                    }
-                    anode[optrx][optry].cost=anode[optrx][optry].g+alpha_third*dynamic*anode[optrx][optry].h-penalty+alpha;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    resortopenlist(openlist,anode[optrx][optry],1);   //将该相邻节点放入openlist并重排序openlist
-                }
-            }
-            if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
-                notfound();
-                return;
-            }
-            if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
+void Astar::runBFS(Astarnode current) {
+    int optrx;
+    int optry;
+    QElapsedTimer time;
+    time.start();
+    count=0;
+    QQueue<Astarnode> q; //定义一个队列
+    bool visited[h+1][w+1];
+    memset(visited, false, sizeof(visited));
+    q.enqueue(anode[startx][starty]);
+    visited[startx][starty] = true;
+    while (!q.empty()) {
+        current = q.front();
+        q.dequeue();
+        if (current.x == endx && current.y == endy)
+        {
+            int queuelen=q.size();
+            for(int i=0;i<queuelen;i++)
             {
-                int openlistlen=openlist.size();
-                int i=0;
-                while (i<openlistlen) {
-                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
-                    i++;
-                }
-                break;
+                current = q.front();
+                q.dequeue();
+                status[current.x][current.y]=7; //队列中的待扩展点
             }
-            current=getopenlist(openlist,1);  //否则继续寻找，从openlist首节点开始，openlist是升序的
-            status[current.x][current.y]=5;
-            count++;
+            break;
         }
-        //前面已确保openlist不为空，因此至此问题必定解决
-        issolved=true;
-        shutevent=true;
-        updateandpaint();   //最终输出阵列的函数
-        double astar=time.nsecsElapsed();
-        astar=astar/pow(10,6);
-        if(hfunc==1){
-            yydsAstarDiaTime=astar;
-            yydsAstarDiaExtend=count;
-        }else if(hfunc==2){
-            yydsAstarManTime=astar;
-            yydsAstarManExtend=count;
-        }else if(hfunc==3){
-            yydsAstarEuTime=astar;
-            yydsAstarEuExtend=count;
+        for (int i = 1; i <= 4; i++) {
+            optrx = current.x + ((i + 1) % 2) * (i - 3);
+            optry = current.y + (i % 2) * (i - 2);
+            if (optrx <= 0 or optrx > h or optry <= 0 or optry > w) continue;
+            if (anode[optrx][optry].isClosed) continue;
+            if (!visited[optrx][optry]) {
+                q.enqueue(anode[optrx][optry]);
+                visited[optrx][optry] = true;
+                status[optrx][optry]=5;
+                count++;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+            }
         }
     }
-
-    if(hfunc==7 or hfunc==8 or hfunc==9) //传统A*
-    {
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        while(1){
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    optrx=current.x+(i>=3?1:-1);
-                    optry=current.y+pow(-1,i);
-                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
-                    if(anode[optrx][optry].isClosed) continue;
-                    if(anode[optrx][optry].g==0){
-                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
-                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        putopenlist(openlist,anode[optrx][optry],1);
-                        anode[optrx][optry].isInOpenList=true;
-                        //status[optrx][optry]=5;
-                    }
-                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
-                        anode[optrx][optry].g=current.g+14;
-                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        resortopenlist(openlist,anode[optrx][optry],1);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
-                optrx=current.x+((i+1)%2)*(i-3);
-                optry=current.y+(i%2)*(i-2);
-                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
-                if(anode[optrx][optry].isClosed) continue;
-                if(anode[optrx][optry].g==0){ //新的扩展点
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;   //f=g+h
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    putopenlist(openlist,anode[optrx][optry],1);
-                    anode[optrx][optry].isInOpenList=true;
-                }
-                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    resortopenlist(openlist,anode[optrx][optry],1);
-                }
-            }
-            if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
-                notfound();
-                return;
-            }
-            if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
-            {
-                int openlistlen=openlist.size();
-                int i=0;
-                while (i<openlistlen) {
-                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
-                    i++;
-                }
-                break;
-            }
-            current=getopenlist(openlist,1);
-            status[current.x][current.y]=5;
-            count++;
-        }
-        issolved=true;
-        shutevent=true;
-        updateandpaint();
-        double astar=time.nsecsElapsed();
-        astar=astar/pow(10,6);
-        if(hfunc==7){
-            normalAstarEuTime=astar;
-            normalAstarEuExtend=count;
-        }else if(hfunc==8){
-            normalAstarManTime=astar;
-            normalAstarManExtend=count;
-        }else if(hfunc==9){
-            normalAstarDiaTime=astar;
-            normalAstarDiaExtend=count;
-        }
-    }
-
-    if(hfunc==10 or hfunc==11 or hfunc==12) //双向A*
-    {
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        while(1){ //从起点和从终点轮流进行扩展
-            //从起点开始扩展
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    optrx=current.x+(i>=3?1:-1);
-                    optry=current.y+pow(-1,i);
-                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
-                    if(anode[optrx][optry].isClosed) continue;
-                    if(anode[optrx][optry].g==0){
-                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
-                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        putopenlist(openlist,anode[optrx][optry],1);
-                        anode[optrx][optry].isInOpenList=true;
-                    }
-                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
-                        anode[optrx][optry].g=current.g+14;
-                        anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;  //f=g+dynamic*h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        resortopenlist(openlist,anode[optrx][optry],1);
-                    }
-                }
-            }
+    double bfstime=time.nsecsElapsed();
+    issolved=true;
+    shutevent=true;
+    updateandpaint();
+    bfstime=bfstime/pow(10,6);
+    BfsTime=bfstime;
+    BfsExtend=count;
+}
+void Astar::runDijkstra(Astarnode current) {
+    int optrx;
+    int optry;
+    QElapsedTimer time;
+    time.start();
+    count=0;
+    while(1){
+        if(dir!=2){ //八方向
             for(int i=1; i<=4; i++){
-                optrx=current.x+((i+1)%2)*(i-3);
-                optry=current.y+(i%2)*(i-2);
+                optrx=current.x+(i>=3?1:-1);
+                optry=current.y+pow(-1,i);
                 if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
                 if(anode[optrx][optry].isClosed) continue;
                 if(anode[optrx][optry].g==0){
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    putopenlist(openlist,anode[optrx][optry],1);  //放入开放列表 等待扩展
-                    anode[optrx][optry].isInOpenList=true;
-                }
-                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    resortopenlist(openlist,anode[optrx][optry],1);   //放入开放列表并重排序开放列表
-                }
-            }
-            if(openlist.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[endx][endy].isInOpenList)
-            {
-                int openlistlen=openlist.size();
-                int i=0;
-                while (i<openlistlen) {
-                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
-                    i++;
-                }
-                break;
-            }
-            current=getopenlist(openlist,1);
-            status[current.x][current.y]=5;
-            count++;
-
-            //从终点开始扩展
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    DAoptrx=currentDA.x+(i>=3?1:-1);
-                    DAoptry=currentDA.y+pow(-1,i);
-                    if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                    if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].gda==0){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                        anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                    }
-                    else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){
-                DAoptrx=currentDA.x+((i+1)%2)*(i-3);
-                DAoptry=currentDA.y+(i%2)*(i-2);
-                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                if(anode[DAoptrx][DAoptry].gda==0){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
-                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                }
-                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
-                }
-            }
-            if(openlistDA.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[startx][starty].isInDAOpenList)
-            {
-                int openlistDAlen=openlistDA.size();
-                int i=0;
-                while (i<openlistDAlen) {
-                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7; //标记待扩展点
-                    i++;
-                }
-                break;
-            }
-            currentDA=getopenlist(openlistDA,2);
-            status[currentDA.x][currentDA.y]=6;
-            count++;
-
-            if(intersect(openlist,openlistDA)) //判断openlist和openlistDA是否有交集 并将交集中cost最小的节点返回
-            {
-                Astarnode minNode;
-                minNode=findMinNode(openlist,openlistDA); //找到交集中总代价最小的中间节点(交点)
-                //qDebug("代价最小相交点:(%d,%d)",minNode.x,minNode.y);
-                Astarnode temp=anode[minNode.x][minNode.y],temp1;
-                while(1) //逆序openlistDA节点间的指针
-                {
-                    temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
-                    anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
-                    anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
-                    if(temp1.x==endx and temp1.y==endy) break;
-                    temp=temp1;
-                }
-                int openlistlen=openlist.size();
-                int openlistDAlen=openlistDA.size();
-                int i=0;
-                while (i<openlistlen) {
-                    if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7;
-                    i++;
-                }
-                i=0;
-                while (i<openlistDAlen) {
-                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7;
-                    i++;
-                }
-                break;
-            }
-        }
-        issolved=true;
-        shutevent=true;
-        updateandpaint();
-        double astar=time.nsecsElapsed();
-        astar=astar/pow(10,6);
-        if(hfunc==10){
-            doubleAstarEuTime=astar;
-            doubleAstarEuExtend=count;
-        }else if(hfunc==11){
-            doubleAstarManTime=astar;
-            doubleAstarManExtend=count;
-        }else if(hfunc==12){
-            doubleAstarDiaTime=astar;
-            doubleAstarDiaExtend=count;
-        }
-    }
-
-    if(hfunc==14) //最佳优先搜索GBFS
-    {
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        while(1){
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    optrx=current.x+(i>=3?1:-1);
-                    optry=current.y+pow(-1,i);
-                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
-                    if(anode[optrx][optry].isClosed) continue;
-                    if(anode[optrx][optry].g==0){
-                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
-                        anode[optrx][optry].cost=anode[optrx][optry].h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        putopenlist(openlist,anode[optrx][optry],1);
-                        anode[optrx][optry].isInOpenList=true;
-                    }
-                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
-                        anode[optrx][optry].g=current.g+14;
-                        anode[optrx][optry].cost=anode[optrx][optry].h;  //f=h;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        resortopenlist(openlist,anode[optrx][optry],1);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){ //四方向
-                optrx=current.x+((i+1)%2)*(i-3);
-                optry=current.y+(i%2)*(i-2);
-                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                if(anode[optrx][optry].isClosed) continue;
-                if(anode[optrx][optry].g==0){ //新的扩展点
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].h;   //f=h
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    putopenlist(openlist,anode[optrx][optry],1);
-                    anode[optrx][optry].isInOpenList=true;
-                }
-                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].h;
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    resortopenlist(openlist,anode[optrx][optry],1);
-                }
-            }
-            if(openlist.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[endx][endy].isInOpenList) break;
-            current=getopenlist(openlist,1);
-            status[current.x][current.y]=5;
-            count++;
-        }
-        issolved=true;
-        shutevent=true;
-        updateandpaint();
-        double gbfstime=time.nsecsElapsed();
-        gbfstime=gbfstime/pow(10,6);
-        GbfsTime=gbfstime;
-        GbfsExtend=count;
-    }
-
-    if(hfunc==23){ //Dijkstra算法
-        QElapsedTimer time;
-        time.start();
-        count=0;
-        while(1){
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    optrx=current.x+(i>=3?1:-1);
-                    optry=current.y+pow(-1,i);
-                    if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                    if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
-                    if(anode[optrx][optry].isClosed) continue;
-                    if(anode[optrx][optry].g==0){
-                        anode[optrx][optry].g=current.g+14; //对角走，距离为14
-                        anode[optrx][optry].cost=anode[optrx][optry].g;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        putopenlist(openlist,anode[optrx][optry],1);
-                        anode[optrx][optry].isInOpenList=true;
-                    }
-                    else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
-                        anode[optrx][optry].g=current.g+14;
-                        anode[optrx][optry].cost=anode[optrx][optry].g;  //f=g;
-                        anode[optrx][optry].lastpoint.setX(current.x);
-                        anode[optrx][optry].lastpoint.setY(current.y);
-                        resortopenlist(openlist,anode[optrx][optry],1);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){ //四方向
-                optrx=current.x+((i+1)%2)*(i-3);
-                optry=current.y+(i%2)*(i-2);
-                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
-                if(anode[optrx][optry].isClosed) continue;
-                if(anode[optrx][optry].g==0){ //新的扩展点
-                    anode[optrx][optry].g=current.g+10;
-                    anode[optrx][optry].cost=anode[optrx][optry].g;   //f=g
-                    anode[optrx][optry].lastpoint.setX(current.x);
-                    anode[optrx][optry].lastpoint.setY(current.y);
-                    putopenlist(openlist,anode[optrx][optry],1);
-                    anode[optrx][optry].isInOpenList=true;
-                }
-                else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
-                    anode[optrx][optry].g=current.g+10;
+                    anode[optrx][optry].g=current.g+14; //对角走，距离为14
                     anode[optrx][optry].cost=anode[optrx][optry].g;
                     anode[optrx][optry].lastpoint.setX(current.x);
                     anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                }
+                else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+14;
+                    anode[optrx][optry].cost=anode[optrx][optry].g;  //f=g;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
                     resortopenlist(openlist,anode[optrx][optry],1);
                 }
             }
-            if(openlist.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[endx][endy].isInOpenList) break;
-            current=getopenlist(openlist,1);
-            status[current.x][current.y]=5;
-            count++;
         }
-        issolved=true;
-        shutevent=true;
-        updateandpaint();
-        double dijkstratime=time.nsecsElapsed();
-        dijkstratime=dijkstratime/pow(10,6);
-        DijkstraTime=dijkstratime;
-        DijkstraExtend=count;
+        for(int i=1; i<=4; i++){ //四方向
+            optrx=current.x+((i+1)%2)*(i-3);
+            optry=current.y+(i%2)*(i-2);
+            if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+            if(anode[optrx][optry].isClosed) continue;
+            if(anode[optrx][optry].g==0){ //新的扩展点
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g;   //f=g
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                putopenlist(openlist,anode[optrx][optry],1);
+                anode[optrx][optry].isInOpenList=true;
+            }
+            else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                resortopenlist(openlist,anode[optrx][optry],1);
+            }
+        }
+        if(openlist.isEmpty()){
+            notfound();
+            return;
+        }
+        if(anode[endx][endy].isInOpenList) break;
+        current=getopenlist(openlist,1);
+        status[current.x][current.y]=5;
+        count++;
     }
+    issolved=true;
+    shutevent=true;
+    updateandpaint();
+    double dijkstratime=time.nsecsElapsed();
+    dijkstratime=dijkstratime/pow(10,6);
+    DijkstraTime=dijkstratime;
+    DijkstraExtend=count;
 }
+
+void Astar::runGBFS(Astarnode current) {
+    int optrx;
+    int optry;
+    QElapsedTimer time;
+    time.start();
+    count = 0;
+
+    while(1){
+        if(dir!=2){ //八方向
+            for(int i=1; i<=4; i++){
+                optrx=current.x+(i>=3?1:-1);
+                optry=current.y+pow(-1,i);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
+                if(anode[optrx][optry].isClosed) continue;
+                if(anode[optrx][optry].g==0){
+                    anode[optrx][optry].g=current.g+14; //对角走，距离为14
+                    anode[optrx][optry].cost=anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                }
+                else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+14;
+                    anode[optrx][optry].cost=anode[optrx][optry].h;  //f=h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+        }
+        for(int i=1; i<=4; i++){ //四方向
+            optrx=current.x+((i+1)%2)*(i-3);
+            optry=current.y+(i%2)*(i-2);
+            if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+            if(anode[optrx][optry].isClosed) continue;
+            if(anode[optrx][optry].g==0){ //新的扩展点
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].h;   //f=h
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                putopenlist(openlist,anode[optrx][optry],1);
+                anode[optrx][optry].isInOpenList=true;
+            }
+            else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].h;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                resortopenlist(openlist,anode[optrx][optry],1);
+            }
+        }
+        if(openlist.isEmpty()){
+            notfound();
+            return;
+        }
+        if(anode[endx][endy].isInOpenList) break;
+        current=getopenlist(openlist,1);
+        status[current.x][current.y]=5;
+        count++;
+    }
+    issolved=true;
+    shutevent=true;
+    updateandpaint();
+    double gbfstime = time.nsecsElapsed() / 1e6;
+    GbfsTime = gbfstime;
+    GbfsExtend = count;
+}
+
 void Astar::runDFS() {
     path.clear(); //清空列表
     QList<Astarnode> p;
@@ -783,6 +391,417 @@ void Astar::runDFS() {
         }
         dfsPathNum = path.size();
         dfs_updateandpaint(path, 0);
+    }
+}
+
+void Astar::runTraditionalAStar(Astarnode current) {
+    int optrx;
+    int optry;
+    QElapsedTimer time;
+    time.start();
+    count=0;
+    while(1){
+        if(dir!=2){ //八方向
+            for(int i=1; i<=4; i++){
+                optrx=current.x+(i>=3?1:-1);
+                optry=current.y+pow(-1,i);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
+                if(anode[optrx][optry].isClosed) continue;
+                if(anode[optrx][optry].g==0){
+                    anode[optrx][optry].g=current.g+14; //对角走，距离为14
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                    //status[optrx][optry]=5;
+                }
+                else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+14;
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+        }
+        for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+            optrx=current.x+((i+1)%2)*(i-3);
+            optry=current.y+(i%2)*(i-2);
+            if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
+            if(anode[optrx][optry].isClosed) continue;
+            if(anode[optrx][optry].g==0){ //新的扩展点
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;   //f=g+h
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                putopenlist(openlist,anode[optrx][optry],1);
+                anode[optrx][optry].isInOpenList=true;
+            }
+            else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                resortopenlist(openlist,anode[optrx][optry],1);
+            }
+        }
+        if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
+            notfound();
+            return;
+        }
+        if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
+        {
+            int openlistlen=openlist.size();
+            int i=0;
+            while (i<openlistlen) {
+                if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+                i++;
+            }
+            break;
+        }
+        current=getopenlist(openlist,1);
+        status[current.x][current.y]=5;
+        count++;
+    }
+    issolved=true;
+    shutevent=true;
+    updateandpaint();
+    double astarTime = time.nsecsElapsed() / 1e6;
+    switch (hfunc) {
+    case 7: normalAstarEuTime = astarTime; normalAstarEuExtend = count; break;
+    case 8: normalAstarManTime = astarTime; normalAstarManExtend = count; break;
+    case 9: normalAstarDiaTime = astarTime; normalAstarDiaExtend = count; break;
+    }
+}
+
+void Astar::runOptimizeAstar(Astarnode current) {
+    int optrx;
+    int optry;
+    QElapsedTimer time;
+    time.start();
+    count=0;
+    while(1){
+        //dir=1为八方向，dir=2为四方向，八方向不用考虑拐角问题
+        if(dir!=2){ //八方向，同四方向理
+            for(int i=1; i<=4; i++){
+                optrx=current.x+(i>=3?1:-1);
+                optry=current.y+pow(-1,i);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
+                if(anode[optrx][optry].isClosed) continue;
+                if(anode[optrx][optry].g==0){
+                    anode[optrx][optry].g=current.g+14; //对角走，距离为14
+                    temp=double(anode[optrx][optry].h)/double(straight);
+                    if(temp>0.5){
+                        dynamic=1.3;
+                    }
+                    else{
+                        dynamic=1;
+                    }
+                    anode[optrx][optry].cost=anode[optrx][optry].g+dynamic*anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                }
+                else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+14;
+                    temp=double(anode[optrx][optry].h)/double(straight);
+                    if(temp>0.5){
+                        dynamic=1.3;
+                    }
+                    else{
+                        dynamic=1;
+                    }
+                    anode[optrx][optry].cost=anode[optrx][optry].g+dynamic*anode[optrx][optry].h;  //f=g+dynamic*h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+        }
+        for(int i=1; i<=4; i++){ //四方向，i=1，2，3，4分别代表上右下左
+            optrx=current.x+((i+1)%2)*(i-3);    //如果i是奇数，在x方向移动，y方向上不变
+            optry=current.y+(i%2)*(i-2);        //如果i是偶数，在y方向移动，x方向上不变
+            if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;    //判断是否到达边界
+            if(anode[optrx][optry].isClosed) continue;
+            int penalty = 0;
+            int alpha = 0;
+            int alpha_third =1;
+            if(factor==2 || factor==1 || factor==3){
+                if(((factor == 2 || factor==3)and (current.lastpoint.x() - current.x) * (current.x - optrx) + (current.lastpoint.y() - current.y) * (current.y - optry) != 0)){
+                    penalty = penal;
+                }
+                //选择障碍数因子alpha
+                if (factor == 1 || factor==3){
+                    switch (mode) {
+                    case 1: //静态alpha
+                        switch(current.blocks){
+                        case 0:
+                            alpha = -10;
+                            break;
+                        case 1:
+                            alpha = 1;
+                            break;
+                        case 2:
+                            alpha = 5;
+                            break;
+                        case 3:
+                            alpha = 10;
+                            break;
+                        case 4:
+                            alpha = 20;
+                            break;
+                        }
+                        break;
+                    case 2: //考虑相邻节点
+                        beta = current.blocks + anode[optrx][optry].blocks;
+                        alpha = beta*10;
+                        break;
+                    case 3: //动态获取
+                        alpha = 0;
+                        alpha_third = current.blocks;
+                        break;
+                    }
+                }
+            }
+            if(anode[optrx][optry].g==0){ //新的扩展点
+                anode[optrx][optry].g=current.g+10; //计算它的实际距离g
+                temp=double(anode[optrx][optry].h)/double(straight);
+                if(temp>0.5){
+                    dynamic=1.3;
+                }
+                else{
+                    dynamic=1;
+                }
+                anode[optrx][optry].cost=anode[optrx][optry].g+alpha_third*dynamic*anode[optrx][optry].h-penalty+alpha;   //f=g+h
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                putopenlist(openlist,anode[optrx][optry],1);  //将该相邻节点放入开放列表 开放列表存放可扩展节点
+                anode[optrx][optry].isInOpenList=true;
+            }
+            //如果当前节点的花费比相邻节点少，可以继续在当前节点的相邻节点查找
+            else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                anode[optrx][optry].g=current.g+10;
+                temp=double(anode[optrx][optry].h)/double(straight);
+                if(temp>0.5){
+                    dynamic=1.3;
+                }
+                else{
+                    dynamic=1;
+                }
+                anode[optrx][optry].cost=anode[optrx][optry].g+alpha_third*dynamic*anode[optrx][optry].h-penalty+alpha;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                resortopenlist(openlist,anode[optrx][optry],1);   //将该相邻节点放入openlist并重排序openlist
+            }
+        }
+        if(openlist.isEmpty()){ //如果openlist为空，说明没有可行通路
+            notfound();
+            return;
+        }
+        if(anode[endx][endy].isInOpenList) //终点已被访问，说明已找到最短路径
+        {
+            int openlistlen=openlist.size();
+            int i=0;
+            while (i<openlistlen) {
+                if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+                i++;
+            }
+            break;
+        }
+        current=getopenlist(openlist,1);  //否则继续寻找，从openlist首节点开始，openlist是升序的
+        status[current.x][current.y]=5;
+        count++;
+    }
+    //前面已确保openlist不为空，因此至此问题必定解决
+    issolved=true;
+    shutevent=true;
+    updateandpaint();   //最终输出阵列的函数
+    double astar = time.nsecsElapsed() / 1e6;
+    switch (hfunc) {
+    case 1: yydsAstarEuTime = astar; yydsAstarEuExtend = count; break;
+    case 2: yydsAstarManTime = astar; yydsAstarManExtend = count; break;
+    case 3: yydsAstarDiaTime = astar; yydsAstarDiaExtend = count; break;
+    }
+}
+
+void Astar::runDoubleAstar(Astarnode current, Astarnode currentDA) {
+    int optrx;
+    int optry;
+    int DAoptrx;
+    int DAoptry;
+    QElapsedTimer time;
+    time.start();
+    count=0;
+    while(1){ //从起点和从终点轮流进行扩展
+        //从起点开始扩展
+        if(dir!=2){ //八方向
+            for(int i=1; i<=4; i++){
+                optrx=current.x+(i>=3?1:-1);
+                optry=current.y+pow(-1,i);
+                if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+                if(anode[current.x][optry].isClosed and anode[optrx][current.y].isClosed) continue;
+                if(anode[optrx][optry].isClosed) continue;
+                if(anode[optrx][optry].g==0){
+                    anode[optrx][optry].g=current.g+14; //对角走，距离为14
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    putopenlist(openlist,anode[optrx][optry],1);
+                    anode[optrx][optry].isInOpenList=true;
+                }
+                else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
+                    anode[optrx][optry].g=current.g+14;
+                    anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;  //f=g+dynamic*h;
+                    anode[optrx][optry].lastpoint.setX(current.x);
+                    anode[optrx][optry].lastpoint.setY(current.y);
+                    resortopenlist(openlist,anode[optrx][optry],1);
+                }
+            }
+        }
+        for(int i=1; i<=4; i++){
+            optrx=current.x+((i+1)%2)*(i-3);
+            optry=current.y+(i%2)*(i-2);
+            if(optrx<=0 or optrx>h or optry<=0 or optry>w) continue;
+            if(anode[optrx][optry].isClosed) continue;
+            if(anode[optrx][optry].g==0){
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                putopenlist(openlist,anode[optrx][optry],1);  //放入开放列表 等待扩展
+                anode[optrx][optry].isInOpenList=true;
+            }
+            else if(anode[optrx][optry].g>current.g+10 and anode[optrx][optry].isInOpenList){
+                anode[optrx][optry].g=current.g+10;
+                anode[optrx][optry].cost=anode[optrx][optry].g+anode[optrx][optry].h;
+                anode[optrx][optry].lastpoint.setX(current.x);
+                anode[optrx][optry].lastpoint.setY(current.y);
+                resortopenlist(openlist,anode[optrx][optry],1);   //放入开放列表并重排序开放列表
+            }
+        }
+        if(openlist.isEmpty()){
+            notfound();
+            return;
+        }
+        if(anode[endx][endy].isInOpenList)
+        {
+            int openlistlen=openlist.size();
+            int i=0;
+            while (i<openlistlen) {
+                if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7; //标记待扩展点
+                i++;
+            }
+            break;
+        }
+        current=getopenlist(openlist,1);
+        status[current.x][current.y]=5;
+        count++;
+
+        //从终点开始扩展
+        if(dir!=2){ //八方向
+            for(int i=1; i<=4; i++){
+                DAoptrx=currentDA.x+(i>=3?1:-1);
+                DAoptry=currentDA.y+pow(-1,i);
+                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+                if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
+                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+                if(anode[DAoptrx][DAoptry].gda==0){
+                    anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
+                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
+                }
+                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
+                    anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
+                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
+                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+                }
+            }
+        }
+        for(int i=1; i<=4; i++){
+            DAoptrx=currentDA.x+((i+1)%2)*(i-3);
+            DAoptry=currentDA.y+(i%2)*(i-2);
+            if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+            if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+            if(anode[DAoptrx][DAoptry].gda==0){
+                anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+                anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+                anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+                anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+                putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
+                anode[DAoptrx][DAoptry].isInDAOpenList=true;
+            }
+            else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
+                anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+                anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+                anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+                anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+                resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
+            }
+        }
+        if(openlistDA.isEmpty()){
+            notfound();
+            return;
+        }
+        if(anode[startx][starty].isInDAOpenList)
+        {
+            int openlistDAlen=openlistDA.size();
+            int i=0;
+            while (i<openlistDAlen) {
+                if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7; //标记待扩展点
+                i++;
+            }
+            break;
+        }
+        currentDA=getopenlist(openlistDA,2);
+        status[currentDA.x][currentDA.y]=6;
+        count++;
+
+        if(intersect(openlist,openlistDA)) //判断openlist和openlistDA是否有交集 并将交集中cost最小的节点返回
+        {
+            Astarnode minNode;
+            minNode=findMinNode(openlist,openlistDA); //找到交集中总代价最小的中间节点(交点)
+            //qDebug("代价最小相交点:(%d,%d)",minNode.x,minNode.y);
+            Astarnode temp=anode[minNode.x][minNode.y],temp1;
+            while(1) //逆序openlistDA节点间的指针
+            {
+                temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
+                anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
+                anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
+                if(temp1.x==endx and temp1.y==endy) break;
+                temp=temp1;
+            }
+            int openlistlen=openlist.size();
+            int openlistDAlen=openlistDA.size();
+            int i=0;
+            while (i<openlistlen) {
+                if(openlist[i].x != endx or openlist[i].y != endy) status[openlist[i].x][openlist[i].y]=7;
+                i++;
+            }
+            i=0;
+            while (i<openlistDAlen) {
+                if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7;
+                i++;
+            }
+            break;
+        }
+    }
+    issolved=true;
+    shutevent=true;
+    updateandpaint();
+    double astar = time.nsecsElapsed() / 1e6;
+    switch (hfunc) {
+    case 10: doubleAstarEuTime = astar; doubleAstarEuExtend = count; break;
+    case 11: doubleAstarManTime = astar; doubleAstarManExtend = count; break;
+    case 12: doubleAstarDiaTime = astar; doubleAstarDiaExtend = count; break;
     }
 }
 
@@ -833,9 +852,8 @@ double Astar::calculateHeuristic(int i, int j) {
         return std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
     case 10: // Bi-directional A* Euclidean
         return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
-    // Additional cases as necessary
     default:
-        return 0; // Or an appropriate default for unknown hfunc
+        return 0;
     }
 }
 
