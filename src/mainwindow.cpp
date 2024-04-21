@@ -124,6 +124,8 @@ void MainWindow::setMenuBar(){
     bfsAction->setCheckable(true);
     dijkstraAction=new QAction("Dijkstra");
     dijkstraAction->setCheckable(true);
+    acoAction=new QAction("蚁群算法");
+    acoAction->setCheckable(true);
     gbfsAction=new QAction("GBFS");
     gbfsAction->setCheckable(true);
     //贝塞尔曲线
@@ -139,7 +141,8 @@ void MainWindow::setMenuBar(){
     hfuncAction->addAction(dfsAction); //“深搜”
     hfuncAction->addAction(bfsAction); //“广度优先”
     hfuncAction->addAction(dijkstraAction); //“Dijkstra”
-    hfuncAction->addAction(gbfsAction); //“最佳优先搜索”
+    hfuncAction->addAction(acoAction); //ACO蚁群算法
+    hfuncAction->addAction(gbfsAction); //GBFS最佳优先搜索
     hfuncAction->addAction(nAstarEudistance); //“传统A*”
     hfuncAction->addAction(nAstarMandistance);
     hfuncAction->addAction(nAstarDiadistance);
@@ -194,6 +197,10 @@ void MainWindow::setMenuBar(){
     settingMenu->addMenu(Dstarmenu); //添加“D星算法”选项
     settingMenu->addMenu(LPAstarmenu); //添加“LPA*”选项
     settingMenu->addMenu(Dlitemenu); //添加“D*Lite”选项
+    settingMenu->addSeparator();  //设置分界线
+    settingMenu->addSeparator();  //设置分界线
+    settingMenu->addAction(acoAction); //添加“蚁群算法”选项
+
 
     //“传统A*”子菜单栏
     normalAstarmenu->addAction(nAstarEudistance);
@@ -253,6 +260,8 @@ void MainWindow::setMenuBar(){
     connect(bfsAction,SIGNAL(triggered(bool)),this,SLOT(sethfunc()));
     //Dijkstra
     connect(dijkstraAction,SIGNAL(triggered(bool)),this,SLOT(sethfunc()));
+    //蚁群算法
+    connect(acoAction,SIGNAL(triggered(bool)),this,SLOT(sethfunc()));
     //最佳优先搜索
     connect(gbfsAction,SIGNAL(triggered(bool)),this,SLOT(sethfunc()));
     //D星
@@ -624,6 +633,13 @@ void MainWindow::sethfunc(){
         setStatusBar(map->w,map->h,2,5);
         set4dir->trigger();
     }
+    else if(acoAction->isChecked()){ //蚁群算法
+        isDstar=false;
+        isDlite=false;
+        isLPA=false;
+        map->sethfunc(24);
+        setStatusBar(map->w,map->h,0,24);
+    }
     else if(dijkstraAction->isChecked()){ //Dijkstra
         isDstar=false;
         isDlite=false;
@@ -838,9 +854,6 @@ void MainWindow::setStatusBar(int x,int y,int dir,int hfunc){
     case 5:
         hfuncStatus->setText(QString("|算法：广度优先"));
         break;
-    case 23:
-        hfuncStatus->setText(QString("|算法：Dijkstra"));
-        break;
     case 6:
         hfuncStatus->setText(QString("|深度优先最优路径"));
         break;
@@ -891,6 +904,12 @@ void MainWindow::setStatusBar(int x,int y,int dir,int hfunc){
         break;
     case 22:
         hfuncStatus->setText(QString("|算法：D*lite 切比雪夫距离"));
+        break;
+    case 23:
+        hfuncStatus->setText(QString("|算法：Dijkstra"));
+        break;
+    case 24:
+        hfuncStatus->setText(QString("|算法：ACO"));
         break;
     }
 }

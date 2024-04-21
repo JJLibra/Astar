@@ -21,7 +21,7 @@
 #include <QButtonGroup>
 #include <QTimer>
 #include <about.h>
-#include <analysis.h> //“性能分析”头文件
+#include <analysis.h>
 #include <QStatusBar>
 #include <QLayout>
 #include <QFileDialog>
@@ -89,6 +89,7 @@ private:
     QAction *dfsAction;//定义深度优先
     QAction *bfsAction;//定义广度优先
     QAction *dijkstraAction;//定义Dijkstra
+    QAction *acoAction;//定义蚁群算法
     QAction *gbfsAction;//定义GBFS
     QAction *nAstarEudistance;//定义传统A星欧几里得距离
     QAction *nAstarMandistance;//定义传统A星曼哈顿距离

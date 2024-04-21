@@ -72,6 +72,7 @@ Astar::Astar(const QString &text, QWidget *parent,int width,int height,int recta
     hfunc=1;
     dynamic=1;
     bezierNum=10;
+    generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
 void Astar::createRandmap(){
     unsigned seed;
@@ -187,9 +188,27 @@ void Astar::runAstar(){
         case 23:
             runDijkstra(current);
             break;
+        case 24: //ACO
+            runACO();
+            break;
     }
 }
 
+void Astar::runDFS() {
+    path.clear(); //清空列表
+    QList<Astarnode> p;
+    isoverflow = false;
+    dfs(startx, starty, p, 0); //初始路径长度为0
+    isdfssolved = true;
+    if (isdfssolved) {
+            if (isoverflow) {
+            dfsPathNum = -1;
+            return; // 出现溢出 返回
+            }
+            dfsPathNum = path.size();
+            dfs_updateandpaint(path, 0);
+    }
+}
 void Astar::runBFS(Astarnode current) {
     int optrx;
     int optry;
@@ -307,7 +326,6 @@ void Astar::runDijkstra(Astarnode current) {
     DijkstraTime=dijkstratime;
     DijkstraExtend=count;
 }
-
 void Astar::runGBFS(Astarnode current) {
     int optrx;
     int optry;
@@ -377,23 +395,6 @@ void Astar::runGBFS(Astarnode current) {
     GbfsTime = gbfstime;
     GbfsExtend = count;
 }
-
-void Astar::runDFS() {
-    path.clear(); //清空列表
-    QList<Astarnode> p;
-    isoverflow = false;
-    dfs(startx, starty, p, 0); //初始路径长度为0
-    isdfssolved = true;
-    if (isdfssolved) {
-        if (isoverflow) {
-            dfsPathNum = -1;
-            return; // 出现溢出 返回
-        }
-        dfsPathNum = path.size();
-        dfs_updateandpaint(path, 0);
-    }
-}
-
 void Astar::runTraditionalAStar(Astarnode current) {
     int optrx;
     int optry;
@@ -475,7 +476,6 @@ void Astar::runTraditionalAStar(Astarnode current) {
     case 9: normalAstarDiaTime = astarTime; normalAstarDiaExtend = count; break;
     }
 }
-
 void Astar::runOptimizeAstar(Astarnode current) {
     int optrx;
     int optry;
@@ -627,7 +627,6 @@ void Astar::runOptimizeAstar(Astarnode current) {
     case 3: yydsAstarDiaTime = astar; yydsAstarDiaExtend = count; break;
     }
 }
-
 void Astar::runDoubleAstar(Astarnode current, Astarnode currentDA) {
     int optrx;
     int optry;
@@ -805,6 +804,161 @@ void Astar::runDoubleAstar(Astarnode current, Astarnode currentDA) {
     }
 }
 
+void Astar::initializeAnts(int numberOfAnts) {
+    ants.clear();  // 清除现有的蚂蚁列表
+    for (int i = 0; i < numberOfAnts; ++i) {
+        Ant newAnt;
+        newAnt.path.push_back(*start);  // 假设每只蚂蚁都从起点开始
+        newAnt.pathLength = 0;  // 初始化路径长度为 0
+        ants.push_back(newAnt);  // 将新蚂蚁添加到列表中
+    }
+    qDebug() << "Initialized" << numberOfAnts << "ants.";
+}
+
+void Astar::initializePheromones() {
+    // 遍历所有节点，初始化信息素
+    for (int i = 1; i <= h; i++) {
+        for (int j = 1; j <= w; j++) {
+            anode[i][j].pheromone = initialPheromone;
+        }
+    }
+}
+
+QVector<QPoint> Astar::getNeighbors(const QPoint& current) {
+    QVector<QPoint> neighbors;
+    const int dx[4] = {1, 0, -1, 0};
+    const int dy[4] = {0, 1, 0, -1};
+
+//    qDebug() << "Checking neighbors for point: (" << current.x() << "," << current.y() << ")";
+    for (int i = 0; i < 4; ++i) {
+        int nx = current.x() + dx[i];
+        int ny = current.y() + dy[i];
+
+        if (nx > 0 && nx <= w && ny > 0 && ny <= h && status[nx][ny] != 1) { // Ensure the point is within map boundaries and not an obstacle
+            neighbors.append(QPoint(nx, ny));
+//            qDebug() << "Neighbor added: (" << nx << "," << ny << ")";
+        }
+    }
+//    qDebug() << "Total neighbors for point (" << current.x() << "," << current.y() << "): " << neighbors.size();
+    return neighbors;
+}
+
+void Astar::constructPath(Ant &ant) {
+    QPoint current = *start;
+    ant.path.clear();
+    ant.path.push_back(current);
+    ant.pathLength = 0;
+
+    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    std::default_random_engine generator(std::random_device{}());
+
+    while (current != *end && ant.path.size() < 100) {  // 避免无限循环，添加最大步数限制
+        QVector<QPoint> neighbors = getNeighbors(current);
+        if (neighbors.isEmpty()) {
+            break;
+        }
+
+        double sumPheromone = 0;
+        QVector<double> probabilities;
+        for (const QPoint &neighbor : neighbors) {
+            double pheromone = anode[neighbor.x()][neighbor.y()].pheromone;
+            sumPheromone += pheromone;
+            probabilities.push_back(pheromone);
+        }
+
+        if (sumPheromone <= 0) continue;
+
+        double randChoice = distribution(generator) * sumPheromone;
+        double cumulative = 0;
+        for (int i = 0; i < probabilities.size(); ++i) {
+            cumulative += probabilities[i];
+            if (randChoice <= cumulative) {
+                QPoint nextPoint = neighbors[i];
+                double distance = sqrt(pow(current.x() - nextPoint.x(), 2) + pow(current.y() - nextPoint.y(), 2));
+                ant.pathLength += distance;  // 更新路径长度
+                ant.path.push_back(nextPoint);  // 更新路径
+                current = nextPoint;
+                break;
+            }
+        }
+    }
+}
+
+void Astar::updatePheromones() {
+    for (Ant &ant : ants) {
+        if (ant.path.size() < 2) continue;  // 如果路径长度小于2，跳过更新
+
+        double depositAmount = pheromoneDeposit / ant.pathLength;
+        for (int i = 0; i < ant.path.size() - 1; ++i) {
+            QPoint &current = ant.path[i];
+            QPoint &next = ant.path[i + 1];
+            anode[next.x()][next.y()].pheromone += depositAmount;  // 在路径上的每个节点之间增加信息素
+        }
+    }
+//    qDebug("Pheromones updated for all ants.");
+}
+
+void Astar::evaporatePheromones() {
+    for (int i = 1; i <= h; i++) {
+        for (int j = 1; j <= w; j++) {
+            anode[i][j].pheromone *= (1 - evaporationRate);
+        }
+    }
+}
+
+void Astar::searchForShortestPath() {
+    double shortestPathLength = std::numeric_limits<double>::max();
+    QVector<QPoint> bestPath;
+
+    for (int i = 0; i < ants.size(); ++i) {
+        if (ants[i].pathLength < shortestPathLength && !ants[i].path.isEmpty()) {
+            shortestPathLength = ants[i].pathLength;
+            bestPath = ants[i].path;
+        }
+    }
+
+    qDebug() << "Shortest path length:" << shortestPathLength;
+    qDebug() << "Shortest path:";
+    for (const QPoint &node : bestPath) {
+        qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
+    }
+}
+
+void Astar::runACO() {
+    qDebug("Starting ACO algorithm.");
+    initializeAnts(20);  // 初始化蚂蚁
+    initializePheromones();
+    qDebug("Initialization of pheromones complete.");
+
+    if (ants.isEmpty()) {
+        qDebug("No ants initialized.");
+        return;
+    }
+
+    double shortestPathLength = std::numeric_limits<double>::max();
+    QVector<QPoint> bestPath;
+
+    for (int iteration = 1; iteration <= maxIterations; ++iteration) {
+//        qDebug() << "Iteration" << iteration << "of" << maxIterations;
+        for (Ant &ant : ants) {
+            constructPath(ant);
+            if (ant.pathLength < shortestPathLength) {
+                shortestPathLength = ant.pathLength;
+                bestPath = ant.path;
+            }
+        }
+        updatePheromones();  // 一次更新所有蚂蚁的信息素
+        evaporatePheromones();  // 信息素蒸发
+    }
+
+    qDebug() << "Shortest path length:" << shortestPathLength;
+    qDebug() << "Shortest path:";
+    for (const QPoint &node : bestPath) {
+        qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
+    }
+    qDebug("ACO algorithm completed.");
+}
+
 void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.g = 0;
     node.gda = 0;
@@ -816,15 +970,14 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.x = i;
     node.y = j;
 
-    // Compute heuristic based on the function selected
     switch(hfunc) {
-    case 1: // Chebyshev distance optimized A*
+    case 1: // 切比雪夫距离
         node.h = std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
         break;
-    case 2: // Manhattan distance optimized A*
+    case 2: // 曼哈顿距离
         node.h = (abs(i - endx) + abs(j - endy)) * 10;
         break;
-    case 3: // Euclidean distance optimized A*
+    case 3: // 欧式距离
         node.h = sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
         break;
     default:
@@ -834,29 +987,27 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
 
     if(factor == 1) calculateBlocks(node, i, j);
 
-    node.cost = node.h; // Assuming initial g is 0, cost is just h
-    node.costDA = node.hda; // For bidirectional A*
+    node.cost = node.h;
+    node.costDA = node.hda;
 
     node.isClosed = (status[i][j] == 1 || status[i][j] == 2);
     node.isClosedDA = (status[i][j] == 1 || status[i][j] == 3);
     node.visited = node.isClosed;
 }
-
 double Astar::calculateHeuristic(int i, int j) {
     switch(hfunc) {
-    case 7: // Traditional A* Euclidean distance
+    case 7: // 欧式距离
         return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
-    case 8: // Traditional A* Manhattan
+    case 8: // 曼哈顿距离
         return (abs(i - endx) + abs(j - endy)) * 10;
-    case 9: // Traditional A* Chebyshev
+    case 9: // 切比雪夫距离
         return std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
-    case 10: // Bi-directional A* Euclidean
+    case 10: // 欧式距离
         return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
     default:
         return 0;
     }
 }
-
 void Astar::calculateBlocks(Astarnode& node, int x, int y) {
     int blockCount = 0;
     // 检查周围四个方向的障碍情况
@@ -876,7 +1027,6 @@ void Astar::calculateBlocks(Astarnode& node, int x, int y) {
     }
     node.blocks = blockCount;
 }
-
 void Astar::Initialize(){
     //先清除扩展点列表
     openlist.clear();
@@ -1954,7 +2104,6 @@ void Astar::dfs_updateandpaint(QList<QList<Astarnode>> path, int index){
 void Astar::nextpath(){  //下一条路径
     //qDebug()<<"nextpath";
     if(start->isNull() or end->isNull()){
-        //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
         QMessageBox messagebox(this);
         messagebox.setText("先设置起点和终点哦~");
         messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
@@ -2016,7 +2165,6 @@ void Astar::nextpath(){  //下一条路径
 }
 void Astar::showmin_dfs(){  //显示dfs最短路径
     if(path.isEmpty()){
-        //QMessageBox::information(this,"qwq","路径列表为空！",QMessageBox::Ok);
         QMessageBox messagebox(this);
         messagebox.setText("路径列表为空捏~");
         messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
@@ -2292,7 +2440,7 @@ void Astar::putopenlist(QList<Astarnode> &list, Astarnode data,int isDA){    //�
         list.append(data);  //如果没有找到，就插到队列末尾
     }
 }
-void Astar::putLPAopenlist(QList<Astarnode> &list, Astarnode data){    //将data节点加入开放列表
+void Astar::putLPAopenlist(QList<Astarnode> &list, Astarnode data){    //LPA将data节点加入开放列表
     if(list.isEmpty()){
         list.append(data);
         return;
@@ -2324,7 +2472,7 @@ Astarnode Astar::getopenlist(QList<Astarnode> &list,int isDA){   //首节点出�
     list.removeFirst();
     return a;
 }
-Astarnode Astar::getLPAopenlist(QList<Astarnode> &list){   //首节点出队
+Astarnode Astar::getLPAopenlist(QList<Astarnode> &list){   //LPA首节点出队
     Astarnode a=list[0];
     anode[a.x][a.y].isInOpenList=false;
     list.removeFirst();
@@ -2411,7 +2559,7 @@ void Astar::setmode(int a){
 void Astar::setfactor(int a){
     factor=a;
 }
-//保存地图方法
+//保存地图
 void Astar::savemap(QString dir){
     QFile mapf(dir);
     if(!mapf.open(QIODevice::WriteOnly)){
@@ -2438,7 +2586,7 @@ void Astar::savemap(QString dir){
 
     mapf.close();
 }
-//载入地图方法
+//载入地图
 void Astar::loadmap(QString dir){
     qDebug()<<dir;
     QFile mapf(dir);

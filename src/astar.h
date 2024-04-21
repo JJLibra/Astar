@@ -10,43 +10,8 @@
 #include <cmath>
 #include <analysis.h>
 #include <queue>
-
-//单元格具有的属性
-struct Astarnode{
-  double cost; //花费
-  double costDA; //双向A*花费
-  QPoint lastpoint; //前驱指针
-  QPoint lastpointDA; //DA前驱指针
-  bool isClosed;    //关闭列表标记
-  bool isClosedDA;  //双向A*关闭列表标记
-  int x;
-  int y;
-  int g;    //实际代价
-  int gda;  //双向A*实际代价
-  double h;    //预估代价
-  double hda;  //双向A*预估代价
-  bool isInOpenList;    //开放列表标记
-  bool isInDAOpenList;  //双向A*开放列表标记
-  bool visited;
-  int blocks;   //障碍数
-  int dfs;
-  int pathflag;
-  int rhs; //LPA*预估实际代价
-  int k1;
-  int k2;
-};
-
-struct point{ //贝塞尔曲线节点
-  int x;
-  int y;
-};
-
-struct CompareNode {
-  bool operator()(const Astarnode& a, const Astarnode& b) const {
-      // 假设我们根据cost来比较两个节点，需要的话可以根据你的具体需求来调整
-      return a.cost > b.cost;
-  }
-};
+#include <vector>
+#include <random>
 
 //时间信息
 extern double BfsTime;
@@ -85,6 +50,50 @@ extern int DliteExtend;
 //深搜
 extern int dfsPathNum;
 
+//单元格具有的属性
+struct Astarnode{
+  double cost; //花费
+  double costDA; //双向A*花费
+  QPoint lastpoint; //前驱指针
+  QPoint lastpointDA; //DA前驱指针
+  bool isClosed;    //关闭列表标记
+  bool isClosedDA;  //双向A*关闭列表标记
+  int x;
+  int y;
+  int g;    //实际代价
+  int gda;  //双向A*实际代价
+  double h;    //预估代价
+  double hda;  //双向A*预估代价
+  bool isInOpenList;    //开放列表标记
+  bool isInDAOpenList;  //双向A*开放列表标记
+  bool visited;
+  int blocks;   //障碍数
+  int dfs;
+  int pathflag;
+  int rhs; //LPA*预估实际代价
+  int k1;
+  int k2;
+  double pheromone; // 信息素
+};
+
+struct point{ //贝塞尔曲线节点
+  int x;
+  int y;
+};
+
+struct CompareNode {
+  bool operator()(const Astarnode& a, const Astarnode& b) const {
+      // 假设我们根据cost来比较两个节点，需要的话可以根据你的具体需求来调整
+      return a.cost > b.cost;
+  }
+};
+
+// 蚂蚁结构
+struct Ant {
+  QVector<QPoint> path;
+  double pathLength = 0;
+};
+
 class Astar : public MapLabel{
 protected:
     //void runAstar();    //A*算法的主体函数
@@ -105,6 +114,14 @@ public:
     void runLPAstar();  //LPA*算法
     void runDstar();  //D*算法
     void runDlitestar();  //D*lite算法
+    void initializeAnts(int numberOfAnts);
+    void initializePheromones();
+    QVector<QPoint> getNeighbors(const QPoint& current);
+    void constructPath(Ant &ant);
+    void updatePheromones();
+    void evaporatePheromones();
+    void searchForShortestPath();
+    void runACO(); //蚁群算法
     void nextpath();
     void clearways();
     void setdir(int a);
@@ -119,6 +136,15 @@ public:
     void savemap(QString dir);
     void loadmap(QString dir);
 private:
+    QVector<Ant> ants;
+    QVector<QVector<double>> pheromoneMatrix;
+    const double initialPheromone = 1.0;
+    const double evaporationRate = 0.5;
+    const double pheromoneDeposit = 100.0;
+    const int numAnts = 20; // 蚂蚁的数量
+    const int maxIterations = 100; // 最大迭代次数
+    std::default_random_engine generator;  // 随机数生成器
+
     Astarnode anode[120][120];  //用于记录阵列节点属性
     QList<Astarnode> openlist;  //开放列表，存放未访问节点
     QList<Astarnode> openlistDA; //双向A星终点开放列表
