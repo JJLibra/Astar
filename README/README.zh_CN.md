@@ -102,6 +102,7 @@ git clone git@github.com:JJLibra/A-star.git
    - 自定义拐角权值 penalty
    - 自定义安全距离模式 alpha
 8. 三种增量式搜索算法（还不够完善，不建议使用）
+9. 蚁群算法基础逻辑实现，开发中...
 ```
 
 ## 🤝 部分演示

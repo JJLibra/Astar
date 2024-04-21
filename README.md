@@ -102,6 +102,7 @@ I use Enigma Virtual Box packaging, you can [refer to this blog](https://blog.cs
     - Custom corner weight penalty
     - Custom safe distance mode alpha
 8. Three incremental search algorithms (not perfect enough, not recommended)
+9. Basic logic implementation of ant colony algorithm, under development...
 ```
 
 ## 🤝 Partial-demonstration

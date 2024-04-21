@@ -829,22 +829,20 @@ QVector<QPoint> Astar::getNeighbors(const QPoint& current) {
     const int dx[4] = {1, 0, -1, 0};
     const int dy[4] = {0, 1, 0, -1};
 
-//    qDebug() << "Checking neighbors for point: (" << current.x() << "," << current.y() << ")";
+    //目前暂时实现四方向
     for (int i = 0; i < 4; ++i) {
         int nx = current.x() + dx[i];
         int ny = current.y() + dy[i];
 
-        if (nx > 0 && nx <= w && ny > 0 && ny <= h && status[nx][ny] != 1) { // Ensure the point is within map boundaries and not an obstacle
+        if (nx > 0 && nx <= w && ny > 0 && ny <= h && status[nx][ny] != 1) { // 避开障碍和边界
             neighbors.append(QPoint(nx, ny));
-//            qDebug() << "Neighbor added: (" << nx << "," << ny << ")";
         }
     }
-//    qDebug() << "Total neighbors for point (" << current.x() << "," << current.y() << "): " << neighbors.size();
     return neighbors;
 }
 
 void Astar::constructPath(Ant &ant) {
-    QPoint current = *start;
+    QPoint current = *start; //从起点开始
     ant.path.clear();
     ant.path.push_back(current);
     ant.pathLength = 0;
@@ -852,8 +850,9 @@ void Astar::constructPath(Ant &ant) {
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     std::default_random_engine generator(std::random_device{}());
 
-    while (current != *end && ant.path.size() < 100) {  // 避免无限循环，添加最大步数限制
-        QVector<QPoint> neighbors = getNeighbors(current);
+    while (current != *end && ant.path.size() < 100) {  // 到终点结束循环。避免无限循环，添加最大步数限制
+        QVector<QPoint> neighbors = getNeighbors(current); //判断四个方向状态
+
         if (neighbors.isEmpty()) {
             break;
         }
@@ -895,7 +894,7 @@ void Astar::updatePheromones() {
             anode[next.x()][next.y()].pheromone += depositAmount;  // 在路径上的每个节点之间增加信息素
         }
     }
-//    qDebug("Pheromones updated for all ants.");
+    //qDebug("Pheromones updated for all ants.");
 }
 
 void Astar::evaporatePheromones() {
@@ -908,13 +907,19 @@ void Astar::evaporatePheromones() {
 
 void Astar::searchForShortestPath() {
     double shortestPathLength = std::numeric_limits<double>::max();
-    QVector<QPoint> bestPath;
+    QVector<QPoint> bestPath; //记录最优路径
 
-    for (int i = 0; i < ants.size(); ++i) {
-        if (ants[i].pathLength < shortestPathLength && !ants[i].path.isEmpty()) {
-            shortestPathLength = ants[i].pathLength;
-            bestPath = ants[i].path;
+    for (int iteration = 1; iteration <= maxIterations; ++iteration) { //开始迭代
+        //qDebug() << "Iteration" << iteration << "of" << maxIterations;
+        for (Ant &ant : ants) {
+            constructPath(ant); //蚂蚁开始探路，核心函数
+            if (ant.pathLength < shortestPathLength) { //更新最优路径情况
+                shortestPathLength = ant.pathLength;
+                bestPath = ant.path;
+            }
         }
+        updatePheromones();  // 一次迭代后，更新信息素
+        evaporatePheromones();  // 信息素蒸发
     }
 
     qDebug() << "Shortest path length:" << shortestPathLength;
@@ -926,36 +931,15 @@ void Astar::searchForShortestPath() {
 
 void Astar::runACO() {
     qDebug("Starting ACO algorithm.");
-    initializeAnts(20);  // 初始化蚂蚁
+    initializeAnts(numAnts);  // 初始化一定数量的蚂蚁
     initializePheromones();
-    qDebug("Initialization of pheromones complete.");
 
-    if (ants.isEmpty()) {
+    if (ants.isEmpty()) { //判断蚂蚁初始化情况
         qDebug("No ants initialized.");
         return;
     }
 
-    double shortestPathLength = std::numeric_limits<double>::max();
-    QVector<QPoint> bestPath;
-
-    for (int iteration = 1; iteration <= maxIterations; ++iteration) {
-//        qDebug() << "Iteration" << iteration << "of" << maxIterations;
-        for (Ant &ant : ants) {
-            constructPath(ant);
-            if (ant.pathLength < shortestPathLength) {
-                shortestPathLength = ant.pathLength;
-                bestPath = ant.path;
-            }
-        }
-        updatePheromones();  // 一次更新所有蚂蚁的信息素
-        evaporatePheromones();  // 信息素蒸发
-    }
-
-    qDebug() << "Shortest path length:" << shortestPathLength;
-    qDebug() << "Shortest path:";
-    for (const QPoint &node : bestPath) {
-        qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
-    }
+    searchForShortestPath(); //开始搜索
     qDebug("ACO algorithm completed.");
 }
 
