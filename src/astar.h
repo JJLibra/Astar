@@ -70,6 +70,7 @@ struct Astarnode{
   int blocks;   //障碍数
   int dfs;
   int pathflag;
+  int glpa;
   int rhs; //LPA*预估实际代价
   int k1;
   int k2;
@@ -120,6 +121,7 @@ public:
     void constructPath(Ant &ant);
     void updatePheromones();
     void evaporatePheromones();
+    void removeDuplicates(QVector<QPoint>& path);
     void searchForShortestPath();
     void runACO(); //蚁群算法
     void nextpath();
@@ -141,6 +143,7 @@ private:
     const double initialPheromone = 1.0;
     const double evaporationRate = 0.5;
     const double pheromoneDeposit = 100.0;
+    const int maxPathlen = 500; // 最大路径长度
     const int numAnts = 20; // 蚂蚁的数量
     const int maxIterations = 100; // 最大迭代次数
     std::default_random_engine generator;  // 随机数生成器
@@ -162,6 +165,7 @@ private:
     void showMessage(const QString &message, const QString &iconPath);
     void dfs(int x ,int y ,QList<Astarnode>& p,int plen);
     void updateandpaint();
+    void updateandpaintACO(const QVector<QPoint>& bestPath);
     void dfs_updateandpaint(QList<QList<Astarnode>> path,int index);
     long long comb(int n, int m);
     void putopenlist(QList<Astarnode> & list, Astarnode data,int isDA);  //将节点data放入列表list中
@@ -183,6 +187,7 @@ private:
     bool isDstarsolved;
     bool isDlitesolved;
     bool isdfssolved;
+    bool isacosolved;
     bool isoverflow;
     bool isAnalysis;
     bool isBgset;

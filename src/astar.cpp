@@ -64,6 +64,7 @@ Astar::Astar(const QString &text, QWidget *parent,int width,int height,int recta
     issolved=false;
     isLPAsolved=false;
     isdfssolved=false;
+    isacosolved=false;
     isoverflow=false;
     isAnalysis=false;
     isBgset=false;
@@ -188,7 +189,7 @@ void Astar::runAstar(){
         case 23:
             runDijkstra(current);
             break;
-        case 24: //ACO
+        case 24:
             runACO();
             break;
     }
@@ -395,6 +396,7 @@ void Astar::runGBFS(Astarnode current) {
     GbfsTime = gbfstime;
     GbfsExtend = count;
 }
+
 void Astar::runTraditionalAStar(Astarnode current) {
     int optrx;
     int optry;
@@ -847,10 +849,11 @@ void Astar::constructPath(Ant &ant) {
     ant.path.push_back(current);
     ant.pathLength = 0;
 
+    //随机数生成器，生成 [0.0, 1.0] 范围内的随机数
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     std::default_random_engine generator(std::random_device{}());
 
-    while (current != *end && ant.path.size() < 100) {  // 到终点结束循环。避免无限循环，添加最大步数限制
+    while (current != *end && ant.path.size() < maxPathlen) {  // 到终点结束循环。避免无限循环，添加最大步数限制
         QVector<QPoint> neighbors = getNeighbors(current); //判断四个方向状态
 
         if (neighbors.isEmpty()) {
@@ -904,7 +907,19 @@ void Astar::evaporatePheromones() {
         }
     }
 }
+void Astar::removeDuplicates(QVector<QPoint>& path) {
+    QSet<QPoint> seen;
+    QVector<QPoint> uniquePath;
 
+    for (const QPoint& point : path) {
+        if (!seen.contains(point)) {
+            seen.insert(point);
+            uniquePath.append(point);
+        }
+    }
+
+    path.swap(uniquePath);
+}
 void Astar::searchForShortestPath() {
     double shortestPathLength = std::numeric_limits<double>::max();
     QVector<QPoint> bestPath; //记录最优路径
@@ -927,6 +942,8 @@ void Astar::searchForShortestPath() {
     for (const QPoint &node : bestPath) {
         qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
     }
+    removeDuplicates(bestPath);
+    updateandpaintACO(bestPath);
 }
 
 void Astar::runACO() {
@@ -940,43 +957,85 @@ void Astar::runACO() {
     }
 
     searchForShortestPath(); //开始搜索
+    isacosolved=true;
+    shutevent=true;
     qDebug("ACO algorithm completed.");
 }
-
 void Astar::initializeNode(Astarnode& node, int i, int j) {
-    node.g = 0;
-    node.gda = 0;
-    node.blocks = 0;
-    node.dfs = 0;
-    node.pathflag = 0;
-    node.isInOpenList = false;
-    node.isInDAOpenList = false;
-    node.x = i;
-    node.y = j;
+    node.g=0;
+    node.gda=0;
+    node.blocks=0;
+    node.dfs=0;
+    node.pathflag=0;
 
-    switch(hfunc) {
-    case 1: // 切比雪夫距离
-        node.h = std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
+    switch(hfunc){  //选择预估距离计算公式
+    case 1: //优化A* 切比雪夫
+        node.h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
         break;
-    case 2: // 曼哈顿距离
-        node.h = (abs(i - endx) + abs(j - endy)) * 10;
+    case 2: //优化A* 曼哈顿
+        node.h=(abs(i-endx)+abs(j-endy))*10;
         break;
-    case 3: // 欧式距离
-        node.h = sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
+    case 3: //优化A* 欧式距离
+        node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
         break;
-    default:
-        node.h = calculateHeuristic(i, j);
+    case 7: //传统A* 欧式距离
+        node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        break;
+    case 8: //传统A* 曼哈顿
+        node.h=(abs(i-endx)+abs(j-endy))*10;
+        break;
+    case 9: //传统A* 切比雪夫
+        node.h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
+        break;
+    case 10: //双向A* 欧式距离
+        node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        node.hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
+        break;
+    case 11: //双向A* 曼哈顿
+        node.h=(abs(i-endx)+abs(j-endy))*10;
+        node.hda=(abs(i-startx)+abs(j-starty))*10;
+        break;
+    case 12: //双向A* 切比雪夫
+        node.h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
+        node.hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
+        break;
+    case 14: //GBFS 使用欧式距离
+        node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        break;
+    case 23: //Dijkstra
+        node.h=0;
         break;
     }
 
-    if(factor == 1) calculateBlocks(node, i, j);
-
-    node.cost = node.h;
-    node.costDA = node.hda;
-
-    node.isClosed = (status[i][j] == 1 || status[i][j] == 2);
-    node.isClosedDA = (status[i][j] == 1 || status[i][j] == 3);
-    node.visited = node.isClosed;
+    node.cost=node.h; //因为初始g都为0，所以不需要加，cost等于预估距离即可
+    node.costDA=node.hda;
+    node.x=i;
+    node.y=j;
+    node.isInOpenList=false;
+    node.isInDAOpenList=false;
+    if(factor==1){  //计算各点障碍数
+        for(int op=1; op<=4; op++){
+            int optrx=i+((op+1)%2)*(op-3);
+            int optry=j+(op%2)*(op-2);
+            if(status[optrx][optry]==0) continue;
+            else if(status[optrx][optry]==1 or status[optrx][optry]==2){
+                node.blocks++;
+            }
+        }
+    }
+    if(status[i][j]==0){ //空白 表示可以正常通行
+        node.isClosed=false;
+        node.isClosedDA=false;
+        node.visited=false;  //初始化访问情况
+    }
+    if(status[i][j]==1 or status[i][j]==2){ //1代表障碍 2代表起点
+        node.isClosed=true;
+        node.visited=true;
+        node.dfs=1;
+    }
+    if(status[i][j]==1 or status[i][j]==3){ //3代表终点
+        node.isClosedDA=true;
+    }
 }
 double Astar::calculateHeuristic(int i, int j) {
     switch(hfunc) {
@@ -2217,6 +2276,35 @@ void Astar::showmin_dfs(){  //显示dfs最短路径
     mapl->setPixmap(mappic); //地图数据更新
     dfs_updateandpaint(path,num);
 }
+void Astar::updateandpaintACO(const QVector<QPoint>& bestPath) {
+    waypath.clear(); //先清空结果列表 以免受上一次结果影响
+
+    if (bestPath.isEmpty()) {
+        qDebug() << "No path to draw.";
+        return;
+    }
+
+    QPainter painter(&mappic); //绘制最短路径，这里使用QPainter类绘制
+    painter.setPen(Qt::black);
+    painter.setRenderHint(QPainter::Antialiasing);
+    status[startx][starty]=2; //先设置起点状态，以免终点状态异常
+    status[endx][endy]=3; //先设置终点状态，以免终点状态异常
+
+    QPoint previousPoint = bestPath.first();
+    status[previousPoint.x()][previousPoint.y()] = 2;  // 起点设置状态为2
+
+    for (int i = 1; i < bestPath.size(); ++i) {
+        QPoint currentPoint = bestPath[i];
+        if(currentPoint == *start or currentPoint == *end) continue; //跳过起点、终点
+        status[currentPoint.x()][currentPoint.y()] = 4;  // 设置状态为4
+        waypath.addRoundedRect(border+(currentPoint.y()-1)*recta,border+(currentPoint.x()-1)*recta,square,square,square/4,square/4);
+    }
+    painter.setBrush(QBrush(QColor("#ffe100")));   //绘制最短路径，使用黄色标识
+    painter.drawPath(waypath);
+
+    painter.end();
+    mapl->setPixmap(mappic);
+}
 void Astar::updateandpaint(){
     Astarnode current=anode[endx][endy];    //从最后一个节点向前回溯输出
     if(current.lastpoint.x()==startx and current.lastpoint.y()==starty){ //判断两点是否相邻
@@ -2478,11 +2566,20 @@ void Astar::clearways(){    //清除当前路径
                     anode[i][j].pathflag=0;
                     paintnow(i,j,0,false);  //将对应的单元绘制为白色
                 }
-                if(status[i][j]==2) paintnow(i,j,2,false);  //将对应的单元绘制为白色
-                if(status[i][j]==3) paintnow(i,j,3,false);
+                if(status[i][j]==2) paintnow(i,j,2,false);  //重绘起点
+                if(status[i][j]==3) paintnow(i,j,3,false);  //重绘终点
             }
         }
         isdfssolved=false;
+        mapl->setPixmap(mappic);    //地图数据更新
+    }
+    if(isacosolved){
+        for (int i = 1; i <= h; i++) { //遍历所有的节点
+            for (int j = 1; j <= w; j++) {
+                if(status[i][j]==4) paintnow(i,j,0,false);  //将对应的单元绘制为白色
+            }
+        }
+        isacosolved=false;
         mapl->setPixmap(mappic);    //地图数据更新
     }
     if(!issolved) return;
