@@ -468,9 +468,9 @@ void MainWindow::CreateRandMap(){
 }
 //调用A*算法
 void MainWindow::startA(){
-    if(isLPA) map->runLPAstar();
-    else if(isDstar) map->runDstar();
-    else if(isDlite) map->runDlitestar();
+    if(isLPA) map->runAstar();
+    else if(isDstar) map->runAstar();
+    else if(isDlite) map->runAstar();
     else map->runAstar();
 }
 //调用清除路径函数

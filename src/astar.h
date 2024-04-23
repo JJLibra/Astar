@@ -12,6 +12,8 @@
 #include <queue>
 #include <vector>
 #include <random>
+#include <set>
+#include <utility>
 
 //时间信息
 extern double BfsTime;
@@ -82,13 +84,6 @@ struct point{ //贝塞尔曲线节点
   int y;
 };
 
-struct CompareNode {
-  bool operator()(const Astarnode& a, const Astarnode& b) const {
-      // 假设我们根据cost来比较两个节点，需要的话可以根据你的具体需求来调整
-      return a.cost > b.cost;
-  }
-};
-
 // 蚂蚁结构
 struct Ant {
   QVector<QPoint> path;
@@ -102,7 +97,6 @@ public:
     Astar(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30); //定义Astar类的属性：text用来接收地图信息、width，height分别表示阵列的宽高、rectaa表示单元格的边长
     void createRandmap();
     void initializeNode(Astarnode& node, int i, int j);
-    double calculateHeuristic(int i, int j);
     void calculateBlocks(Astarnode& node, int x, int y);
     void runAstar();    //A*算法的主体函数
     void runDFS();
@@ -112,6 +106,12 @@ public:
     void runTraditionalAStar(Astarnode current);
     void runOptimizeAstar(Astarnode current);
     void runDoubleAstar(Astarnode current, Astarnode currentDA);
+    double heuristic(int x1, int y1, int x2, int y2);
+    void initializeLPA();
+    void tracePath(int endX, int endY);
+    void firstSearchLPA();
+    void updateVertex(Astarnode &node);
+    std::pair<double, double> calculateKey(Astarnode &node);
     void runLPAstar();  //LPA*算法
     void runDstar();  //D*算法
     void runDlitestar();  //D*lite算法
@@ -138,6 +138,19 @@ public:
     void savemap(QString dir);
     void loadmap(QString dir);
 private:
+    struct CompareNode {
+        bool operator()(const std::pair<std::pair<double, double>, Astarnode*>& a,
+                        const std::pair<std::pair<double, double>, Astarnode*>& b) const {
+            if (a.first.first != b.first.first)
+                return a.first.first < b.first.first;
+            if (a.first.second != b.first.second)
+                return a.first.second < b.first.second;
+            return a.second < b.second;
+        }
+    };
+    std::vector<std::pair<int, int>> directions = {{0, 1}, {0, -1}, {-1, 0}, {1, 0}};
+    std::set<std::pair<std::pair<double, double>, Astarnode*>, CompareNode> priorityQueue;
+
     QVector<Ant> ants;
     QVector<QVector<double>> pheromoneMatrix;
     const double initialPheromone = 1.0;
@@ -175,7 +188,7 @@ private:
     void resortopenlist(QList<Astarnode> &list, Astarnode data,int isDA);//存入并重排序openlist
     void Initialize(); //初始化
     bool CompareKey(QList<Astarnode> &list,Astarnode &n2); //比较两节点的key值大小 n1<n2返回true 否则false
-    void calculateKey(Astarnode &n); //LPA*计算key中的k1,k2
+    //void calculateKey(Astarnode &n); //LPA*计算key中的k1,k2
     void updateRhs(Astarnode &n,int w,int h,int dir); //LPA*计算最小rhs
     void GofirstSearch(); //LPA*寻找最短路径 第一次搜索
     void AfterChangedSearch(); //第二次搜索

@@ -58,8 +58,6 @@ int DliteExtend;
 //深搜
 int dfsPathNum;
 
-std::priority_queue<Astarnode, std::vector<Astarnode>, CompareNode> openList;
-
 Astar::Astar(const QString &text, QWidget *parent,int width,int height,int rectaa) : MapLabel(text,parent,width,height,rectaa){
     issolved=false;
     isLPAsolved=false;
@@ -183,8 +181,23 @@ void Astar::runAstar(){
         case 12:
             runDoubleAstar(current, currentDA);
             break;
+        case 13:
+        case 18:
+        case 19:
+            runDstar();
+            break;
         case 14:
             runGBFS(current);
+            break;
+        case 15:
+        case 16:
+        case 17:
+            runLPAstar();
+            break;
+        case 20:
+        case 21:
+        case 22:
+            runDlitestar();
             break;
         case 23:
             runDijkstra(current);
@@ -968,6 +981,19 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.dfs=0;
     node.pathflag=0;
 
+    // 设置LPA*特有的值
+    node.glpa = std::numeric_limits<double>::infinity();
+    node.rhs = (i == startx && j == starty) ? 0 : std::numeric_limits<double>::infinity();
+    //node.glpa = 1000;
+    //node.rhs = (i == startx && j == starty) ? 0 : 1000;
+
+    // 初始化 lastpoint
+    if (i == startx && j == starty) {
+        node.lastpoint = QPoint(i, j);  // 起点的 lastpoint 指向自己
+    } else {
+        node.lastpoint = QPoint(-1, -1); // 其他点初始化为无效坐标
+    }
+
     switch(hfunc){  //选择预估距离计算公式
     case 1: //优化A* 切比雪夫
         node.h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
@@ -1005,6 +1031,9 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     case 23: //Dijkstra
         node.h=0;
         break;
+    default: //默认使用欧式距离
+        node.h = sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        break;
     }
 
     node.cost=node.h; //因为初始g都为0，所以不需要加，cost等于预估距离即可
@@ -1013,15 +1042,9 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.y=j;
     node.isInOpenList=false;
     node.isInDAOpenList=false;
+
     if(factor==1){  //计算各点障碍数
-        for(int op=1; op<=4; op++){
-            int optrx=i+((op+1)%2)*(op-3);
-            int optry=j+(op%2)*(op-2);
-            if(status[optrx][optry]==0) continue;
-            else if(status[optrx][optry]==1 or status[optrx][optry]==2){
-                node.blocks++;
-            }
-        }
+        calculateBlocks(node,i,j);
     }
     if(status[i][j]==0){ //空白 表示可以正常通行
         node.isClosed=false;
@@ -1035,20 +1058,6 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     }
     if(status[i][j]==1 or status[i][j]==3){ //3代表终点
         node.isClosedDA=true;
-    }
-}
-double Astar::calculateHeuristic(int i, int j) {
-    switch(hfunc) {
-    case 7: // 欧式距离
-        return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
-    case 8: // 曼哈顿距离
-        return (abs(i - endx) + abs(j - endy)) * 10;
-    case 9: // 切比雪夫距离
-        return std::max(abs(i - endx), abs(j - endy)) * 14 - 14;
-    case 10: // 欧式距离
-        return sqrt(pow(i - endx, 2) + pow(j - endy, 2)) * 10;
-    default:
-        return 0;
     }
 }
 void Astar::calculateBlocks(Astarnode& node, int x, int y) {
@@ -1122,11 +1131,6 @@ void Astar::Initialize(){
     anode[startx][starty].rhs=0; //起点预估实际距离rhs为0
     calculateKey(anode[startx][starty]); //计算起点key值
     putLPAopenlist(openlist,anode[startx][starty]);
-}
-//LPA*计算节点的key
-void Astar::calculateKey(Astarnode &n){
-    n.k1=qMin(n.g,n.rhs)+n.h; //k1=f
-    n.k2=qMin(n.g,n.rhs);     //k2=g
 }
 //LPA*更新节点的rhs值
 void Astar::updateRhs(Astarnode &n,int w,int h,int dir){
@@ -1352,547 +1356,580 @@ void Astar::AfterChangedSearch(){
     }
     updateandpaint();
 }
+
+double Astar::heuristic(int x1, int y1, int x2, int y2) {
+    return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+}
+
+void Astar::initializeLPA() {
+    for (int i = 1; i <= h; i++) {
+        for (int j = 1; j <= w; j++) {
+            initializeNode(anode[i][j], i, j);
+        }
+    }
+    priorityQueue.clear();
+    Astarnode &startNode = anode[startx][starty];
+    startNode.rhs = 0;
+    startNode.glpa = heuristic(startx, starty, endx, endy);
+
+    // 正确地将节点插入到优先队列中
+    auto key = calculateKey(startNode);
+    priorityQueue.insert({key, &startNode});
+}
+
+void Astar::tracePath(int endX, int endY) {
+    qDebug() << "Tracing path from end to start:";
+    int x = endX;
+    int y = endY;
+
+    qDebug() << "(1" << startx << "," << starty << ")"; // 最后输出起点
+
+    // 回溯路径
+    while (!(x == startx && y == starty)) {
+        qDebug() << "(2" << x << "," << y << ")";
+        QPoint last = anode[x][y].lastpoint;
+        x = last.x();
+        y = last.y();
+    }
+    qDebug() << "(" << startx << "," << starty << ")"; // 最后输出起点
+}
+
+void Astar::firstSearchLPA() {
+    initializeLPA();  // 确保在搜索开始前初始化所有相关数据结构
+
+    qDebug() << "Starting LPA* search";
+    while (!priorityQueue.empty() && (anode[endx][endy].glpa != anode[endx][endy].rhs)) {
+        auto top = priorityQueue.begin();
+        Astarnode* currentNode = top->second;
+        int x = currentNode->x;
+        int y = currentNode->y;
+
+        qDebug() << "Current node at:" << x << "," << y;
+        if (currentNode->glpa > currentNode->rhs) {
+            qDebug() << "Updating glpa to rhs";
+            currentNode->glpa = currentNode->rhs;
+        } else {
+            qDebug() << "Setting glpa to infinity and updating vertex";
+            currentNode->glpa = std::numeric_limits<double>::infinity();
+            updateVertex(*currentNode);
+        }
+
+        priorityQueue.erase(top);
+        qDebug() << "Removed current node from priority queue";
+
+        // 更新所有邻居
+        qDebug() << "Updating neighbors";
+        for (auto dir : directions) {
+            int nx = x + dir.first;
+            int ny = y + dir.second;
+            if (nx > 0 && nx <= h && ny > 0 && ny <= w && !anode[nx][ny].isClosed) {
+                qDebug() << "Checking neighbor at:" << nx << "," << ny;
+                Astarnode& neighbor = anode[nx][ny];
+                double proposedG = currentNode->g + heuristic(x, y, nx, ny);
+                if (neighbor.g > proposedG) {
+                    qDebug() << "Updating neighbor's g";
+                    neighbor.g = proposedG;
+                    neighbor.lastpoint = QPoint(x, y); // 设置前驱节点
+                    updateVertex(neighbor);
+                }
+            }
+        }
+    }
+
+    // 输出路径
+    if (anode[endx][endy].glpa == anode[endx][endy].rhs) {
+        qDebug() << "Path found:";
+        tracePath(endx, endy);
+    } else {
+        qDebug() << "No path found.";
+    }
+}
+
+void Astar::updateVertex(Astarnode &node) {
+    qDebug() << "Updating vertex at:" << node.x << "," << node.y;
+    auto key = calculateKey(node); // 计算新的键值
+    std::pair<std::pair<double, double>, Astarnode*> nodeEntry = {key, &node};
+
+    auto iter = priorityQueue.find(nodeEntry);
+    if (node.g != node.rhs) {
+        if (iter != priorityQueue.end()) {
+            qDebug() << "Erasing old entry from priority queue";
+            priorityQueue.erase(iter);
+            qDebug() << "Old entry removed";
+        }
+        qDebug() << "Inserting new entry into priority queue";
+        priorityQueue.insert(nodeEntry);
+        qDebug() << "New entry inserted";
+        node.isInOpenList = true;
+    } else {
+        if (iter != priorityQueue.end()) {
+            qDebug() << "Removing entry from priority queue as g == rhs";
+            priorityQueue.erase(iter);
+            qDebug() << "Entry removed because g == rhs";
+        } else {
+            qDebug() << "Attempted to remove a non-existent entry, which might cause issues";
+        }
+        node.isInOpenList = false;
+    }
+}
+
+std::pair<double, double> Astar::calculateKey(Astarnode &node) {
+    double key1 = std::min(node.glpa, node.rhs) + heuristic(node.x, node.y, endx, endy);
+    double key2 = std::min(node.glpa, node.rhs);
+    return {key1, key2};
+}
+
 void Astar::runLPAstar() //LPA*算法
 {
-    if(!isLPAMapChanged){
-        //qDebug("check LPA*");
-        isDstarrunning=false;
-        isDliterunning=false;
-        if(isLPAsolved) clearways(); //先清除地图
-        if(issolved){
-            //QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);
-            QMessageBox messagebox(this);
-            messagebox.setText("请先清除当前路径哦~");
-            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-            messagebox.setWindowFlag(Qt::FramelessWindowHint);
-            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-            if (textlabel)
-            {
-                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-            }
-            messagebox.show();
-            //延迟
-            QElapsedTimer t1;
-            t1.start();
-            while(t1.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-            animation1->setDuration(500);
-            animation1->setStartValue(messagebox.geometry());
-            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-            animation1->start();
-            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-            animation2->setDuration(500);
-            animation2->setStartValue(1);
-            animation2->setEndValue(0);
-            animation2->start();
-            //延迟
-            QElapsedTimer t2;
-            t2.start();
-            while(t2.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            return;
-        }
-        if(start->isNull() or end->isNull()){
-            if(!isAnalysis) {
-                //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
-                QMessageBox messagebox(this);
-                messagebox.setText("先设置起点和终点哦~");
-                messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-                messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-                messagebox.setWindowFlag(Qt::FramelessWindowHint);
-                QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-                if (textlabel)
-                {
-                    textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-                }
-                messagebox.show();
-                //延迟
-                QElapsedTimer t1;
-                t1.start();
-                while(t1.elapsed() < 500)
-                {
-                    QApplication::processEvents();
-                }
-                QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-                animation1->setDuration(500);
-                animation1->setStartValue(messagebox.geometry());
-                animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-                animation1->start();
-                QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-                animation2->setDuration(500);
-                animation2->setStartValue(1);
-                animation2->setEndValue(0);
-                animation2->start();
-                //延迟
-                QElapsedTimer t2;
-                t2.start();
-                while(t2.elapsed() < 500)
-                {
-                    QApplication::processEvents();
-                }
-            }
-            return;
-        }
-        GofirstSearch(); //第一次搜索
-    }
-    else{ //地图发生改变 第二次搜索
-        //qDebug("The map of LPA* is changed.");
-        if(isLPAsolved) clearways(); //先清除地图
-        //qDebug("修改点:(%d,%d)",aa,bb);
-        //for all directed edges(u,v) with changed edge costs
-        //  Update the edge cost c(u,v);
-        //  UpdateVertex(v);
-        Initialize();
-        AfterChangedSearch();
-    }
+    qDebug() << "runLPAstar";
+    qDebug() << "(" << startx << "," << starty << ")";
+    showMessage("算法正在开发中...");
+    //firstSearchLPA();
+
 }
 void Astar::runDstar(){ //D*算法
-    if(!isDMapChanged){
-        //qDebug("chack Dstar");
-        isLPArunning=false;
-        isDliterunning=false;
-        if(issolved){
-            //QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);
-            QMessageBox messagebox(this);
-            messagebox.setText("请先清除当前路径哦~");
-            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-            messagebox.setWindowFlag(Qt::FramelessWindowHint);
-            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-            if (textlabel)
-            {
-                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-            }
-            messagebox.show();
-            //延迟
-            QElapsedTimer t1;
-            t1.start();
-            while(t1.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-            animation1->setDuration(500);
-            animation1->setStartValue(messagebox.geometry());
-            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-            animation1->start();
-            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-            animation2->setDuration(500);
-            animation2->setStartValue(1);
-            animation2->setEndValue(0);
-            animation2->start();
-            //延迟
-            QElapsedTimer t2;
-            t2.start();
-            while(t2.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            return;
-        }
-        if(start->isNull() or end->isNull()){
-            //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
-            QMessageBox messagebox(this);
-            messagebox.setText("先设置起点和终点哦~");
-            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-            messagebox.setWindowFlag(Qt::FramelessWindowHint);
-            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-            if (textlabel)
-            {
-                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-            }
-            messagebox.show();
-            //延迟
-            QElapsedTimer t1;
-            t1.start();
-            while(t1.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-            animation1->setDuration(500);
-            animation1->setStartValue(messagebox.geometry());
-            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-            animation1->start();
-            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-            animation2->setDuration(500);
-            animation2->setStartValue(1);
-            animation2->setEndValue(0);
-            animation2->start();
-            //延迟
-            QElapsedTimer t2;
-            t2.start();
-            while(t2.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            return;
-        }
-        //先清除扩展点列表
-        openlistDA.clear();
-        //记录起点、终点的坐标信息
-        startx=start->x();
-        starty=start->y();
-        endx=end->x();
-        endy=end->y();
+    showMessage("算法正在开发中...");
+//    if(!isDMapChanged){
+//        //qDebug("chack Dstar");
+//        isLPArunning=false;
+//        isDliterunning=false;
+//        if(issolved){
+//            //QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);
+//            QMessageBox messagebox(this);
+//            messagebox.setText("请先清除当前路径哦~");
+//            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
+//            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
+//            messagebox.setWindowFlag(Qt::FramelessWindowHint);
+//            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
+//            if (textlabel)
+//            {
+//                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
+//            }
+//            messagebox.show();
+//            //延迟
+//            QElapsedTimer t1;
+//            t1.start();
+//            while(t1.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
+//            animation1->setDuration(500);
+//            animation1->setStartValue(messagebox.geometry());
+//            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
+//            animation1->start();
+//            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
+//            animation2->setDuration(500);
+//            animation2->setStartValue(1);
+//            animation2->setEndValue(0);
+//            animation2->start();
+//            //延迟
+//            QElapsedTimer t2;
+//            t2.start();
+//            while(t2.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            return;
+//        }
+//        if(start->isNull() or end->isNull()){
+//            //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
+//            QMessageBox messagebox(this);
+//            messagebox.setText("先设置起点和终点哦~");
+//            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
+//            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
+//            messagebox.setWindowFlag(Qt::FramelessWindowHint);
+//            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
+//            if (textlabel)
+//            {
+//                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
+//            }
+//            messagebox.show();
+//            //延迟
+//            QElapsedTimer t1;
+//            t1.start();
+//            while(t1.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
+//            animation1->setDuration(500);
+//            animation1->setStartValue(messagebox.geometry());
+//            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
+//            animation1->start();
+//            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
+//            animation2->setDuration(500);
+//            animation2->setStartValue(1);
+//            animation2->setEndValue(0);
+//            animation2->start();
+//            //延迟
+//            QElapsedTimer t2;
+//            t2.start();
+//            while(t2.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            return;
+//        }
+//        //先清除扩展点列表
+//        openlistDA.clear();
+//        //记录起点、终点的坐标信息
+//        startx=start->x();
+//        starty=start->y();
+//        endx=end->x();
+//        endy=end->y();
 
-        //遍历阵列中的节点，初始化节点信息
-        for(int i=1; i<=h; i++){
-            for(int j=1; j<=w; j++){
-                anode[i][j].gda=0;
+//        //遍历阵列中的节点，初始化节点信息
+//        for(int i=1; i<=h; i++){
+//            for(int j=1; j<=w; j++){
+//                anode[i][j].gda=0;
 
-                switch(hfunc){  //选择预估距离计算公式
-                case 13: //D* 欧式距离
-                    anode[i][j].hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
-                    break;
-                case 18: //D* 曼哈顿
-                    anode[i][j].hda=(abs(i-startx)+abs(j-starty))*10;
-                    break;
-                case 19: //D* 切比雪夫
-                    anode[i][j].hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
-                    break;
-                }
+//                switch(hfunc){  //选择预估距离计算公式
+//                case 13: //D* 欧式距离
+//                    anode[i][j].hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
+//                    break;
+//                case 18: //D* 曼哈顿
+//                    anode[i][j].hda=(abs(i-startx)+abs(j-starty))*10;
+//                    break;
+//                case 19: //D* 切比雪夫
+//                    anode[i][j].hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
+//                    break;
+//                }
 
-                anode[i][j].costDA=anode[i][j].hda;
-                anode[i][j].x=i;
-                anode[i][j].y=j;
-                anode[i][j].isInDAOpenList=false;
+//                anode[i][j].costDA=anode[i][j].hda;
+//                anode[i][j].x=i;
+//                anode[i][j].y=j;
+//                anode[i][j].isInDAOpenList=false;
 
-                if(status[i][j]==0){ //空白 表示可以正常通行
-                    anode[i][j].isClosedDA=false;
-                }
-                if(status[i][j]==1 or status[i][j]==3){ //3代表终点
-                    anode[i][j].isClosedDA=true;
-                }
-            }
-        }
+//                if(status[i][j]==0){ //空白 表示可以正常通行
+//                    anode[i][j].isClosedDA=false;
+//                }
+//                if(status[i][j]==1 or status[i][j]==3){ //3代表终点
+//                    anode[i][j].isClosedDA=true;
+//                }
+//            }
+//        }
 
-        //现已初始化节点信息列表，开始获取最短路径
-        Astarnode currentDA;  //表示当前节点
-        int DAoptrx;
-        int DAoptry;
-        currentDA=anode[endx][endy]; //从终点开始
-        QElapsedTimer timeD;
-        timeD.start();
-        count=0;
-        while (1) {
-            //从终点开始扩展
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    DAoptrx=currentDA.x+(i>=3?1:-1);
-                    DAoptry=currentDA.y+pow(-1,i);
-                    if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                    if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].gda==0){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                        anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                    }
-                    else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){
-                DAoptrx=currentDA.x+((i+1)%2)*(i-3);
-                DAoptry=currentDA.y+(i%2)*(i-2);
-                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                if(anode[DAoptrx][DAoptry].gda==0){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
-                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                }
-                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
-                }
-            }
-            if(openlistDA.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[startx][starty].isInDAOpenList)
-            {
-                int openlistDAlen=openlistDA.size();
-                int i=0;
-                while (i<openlistDAlen) {
-                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7; //标记待扩展点
-                    i++;
-                }
-                break;
-            }
-            currentDA=getopenlist(openlistDA,2);
-            status[currentDA.x][currentDA.y]=5;
-            count++;
-        }
+//        //现已初始化节点信息列表，开始获取最短路径
+//        Astarnode currentDA;  //表示当前节点
+//        int DAoptrx;
+//        int DAoptry;
+//        currentDA=anode[endx][endy]; //从终点开始
+//        QElapsedTimer timeD;
+//        timeD.start();
+//        count=0;
+//        while (1) {
+//            //从终点开始扩展
+//            if(dir!=2){ //八方向
+//                for(int i=1; i<=4; i++){
+//                    DAoptrx=currentDA.x+(i>=3?1:-1);
+//                    DAoptry=currentDA.y+pow(-1,i);
+//                    if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+//                    if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
+//                    if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+//                    if(anode[DAoptrx][DAoptry].gda==0){
+//                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
+//                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                        putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+//                        anode[DAoptrx][DAoptry].isInDAOpenList=true;
+//                    }
+//                    else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
+//                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
+//                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
+//                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                        resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+//                    }
+//                }
+//            }
+//            for(int i=1; i<=4; i++){
+//                DAoptrx=currentDA.x+((i+1)%2)*(i-3);
+//                DAoptry=currentDA.y+(i%2)*(i-2);
+//                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+//                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+//                if(anode[DAoptrx][DAoptry].gda==0){
+//                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+//                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
+//                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
+//                }
+//                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
+//                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+//                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
+//                }
+//            }
+//            if(openlistDA.isEmpty()){
+//                notfound();
+//                return;
+//            }
+//            if(anode[startx][starty].isInDAOpenList)
+//            {
+//                int openlistDAlen=openlistDA.size();
+//                int i=0;
+//                while (i<openlistDAlen) {
+//                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7; //标记待扩展点
+//                    i++;
+//                }
+//                break;
+//            }
+//            currentDA=getopenlist(openlistDA,2);
+//            status[currentDA.x][currentDA.y]=5;
+//            count++;
+//        }
 
-        Astarnode temp=anode[startx][starty],temp1;
-        while(1) //逆序openlistDA节点间的指针
-        {
-            temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
-            anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
-            anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
-            if(temp1.x==endx and temp1.y==endy) break;
-            temp=temp1;
-        }
-        int openlistDAlen=openlistDA.size();
-        int i=0;
-        while (i<openlistDAlen) {
-            if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7;
-            i++;
-        }
-        DAstarExtend=count;
-        issolved=true;
-        isDstarsolved=true;
-        isDstarrunning=true;
-        updateandpaint();
-        double Dstarfirst=timeD.nsecsElapsed();
-        DAstarTime=Dstarfirst/pow(10,6);
-    }
-    else{
-        qDebug("The map of Dstar changed.");
-        if(isDstarsolved){
-            clearways();
-            isDstarsolved=false;
-        }
-        //先清除扩展点列表
-        openlistDA.clear();
-        //记录起点、终点的坐标信息
-        startx=start->x();
-        starty=start->y();
-        endx=end->x();
-        endy=end->y();
+//        Astarnode temp=anode[startx][starty],temp1;
+//        while(1) //逆序openlistDA节点间的指针
+//        {
+//            temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
+//            anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
+//            anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
+//            if(temp1.x==endx and temp1.y==endy) break;
+//            temp=temp1;
+//        }
+//        int openlistDAlen=openlistDA.size();
+//        int i=0;
+//        while (i<openlistDAlen) {
+//            if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=7;
+//            i++;
+//        }
+//        DAstarExtend=count;
+//        issolved=true;
+//        isDstarsolved=true;
+//        isDstarrunning=true;
+//        updateandpaint();
+//        double Dstarfirst=timeD.nsecsElapsed();
+//        DAstarTime=Dstarfirst/pow(10,6);
+//    }
+//    else{
+//        qDebug("The map of Dstar changed.");
+//        if(isDstarsolved){
+//            clearways();
+//            isDstarsolved=false;
+//        }
+//        //先清除扩展点列表
+//        openlistDA.clear();
+//        //记录起点、终点的坐标信息
+//        startx=start->x();
+//        starty=start->y();
+//        endx=end->x();
+//        endy=end->y();
 
-        //遍历阵列中的节点，初始化节点信息
-        for(int i=1; i<=h; i++){
-            for(int j=1; j<=w; j++){
-                anode[i][j].gda=0;
+//        //遍历阵列中的节点，初始化节点信息
+//        for(int i=1; i<=h; i++){
+//            for(int j=1; j<=w; j++){
+//                anode[i][j].gda=0;
 
-                switch(hfunc){  //选择预估距离计算公式
-                case 13: //双向A* 欧式距离
-                    anode[i][j].hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
-                    break;
-                case 18: //双向A* 曼哈顿
-                    anode[i][j].hda=(abs(i-startx)+abs(j-starty))*10;
-                    break;
-                case 19: //双向A* 切比雪夫
-                    anode[i][j].hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
-                    break;
-                }
+//                switch(hfunc){  //选择预估距离计算公式
+//                case 13: //双向A* 欧式距离
+//                    anode[i][j].hda=sqrt(((int)pow(i-startx,2)+(int)pow(j-starty,2)))*10;
+//                    break;
+//                case 18: //双向A* 曼哈顿
+//                    anode[i][j].hda=(abs(i-startx)+abs(j-starty))*10;
+//                    break;
+//                case 19: //双向A* 切比雪夫
+//                    anode[i][j].hda=abs(abs(i-startx)-abs(j-starty))*10+(abs(i-startx)>abs(j-starty)?abs(j-starty)*14:abs(i-startx)*14)-14;
+//                    break;
+//                }
 
-                anode[i][j].costDA=anode[i][j].hda;
-                anode[i][j].x=i;
-                anode[i][j].y=j;
-                anode[i][j].isInDAOpenList=false;
+//                anode[i][j].costDA=anode[i][j].hda;
+//                anode[i][j].x=i;
+//                anode[i][j].y=j;
+//                anode[i][j].isInDAOpenList=false;
 
-                if(status[i][j]==0){ //空白 表示可以正常通行
-                    anode[i][j].isClosedDA=false;
-                }
-                if(status[i][j]==1 or status[i][j]==3){ //3代表终点
-                    anode[i][j].isClosedDA=true;
-                }
-            }
-        }
+//                if(status[i][j]==0){ //空白 表示可以正常通行
+//                    anode[i][j].isClosedDA=false;
+//                }
+//                if(status[i][j]==1 or status[i][j]==3){ //3代表终点
+//                    anode[i][j].isClosedDA=true;
+//                }
+//            }
+//        }
 
-        //现已初始化节点信息列表，开始获取最短路径
-        Astarnode currentDA;  //表示当前节点
-        int DAoptrx;
-        int DAoptry;
-        currentDA=anode[endx][endy]; //从终点开始
-        while (1) {
-            //从终点开始扩展
-            if(dir!=2){ //八方向
-                for(int i=1; i<=4; i++){
-                    DAoptrx=currentDA.x+(i>=3?1:-1);
-                    DAoptry=currentDA.y+pow(-1,i);
-                    if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                    if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                    if(anode[DAoptrx][DAoptry].gda==0){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                        anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                    }
-                    else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
-                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
-                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                        resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
-                    }
-                }
-            }
-            for(int i=1; i<=4; i++){
-                DAoptrx=currentDA.x+((i+1)%2)*(i-3);
-                DAoptry=currentDA.y+(i%2)*(i-2);
-                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
-                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
-                if(anode[DAoptrx][DAoptry].gda==0){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
-                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
-                }
-                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
-                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
-                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
-                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
-                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
-                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
-                }
-            }
-            if(openlistDA.isEmpty()){
-                notfound();
-                return;
-            }
-            if(anode[startx][starty].isInDAOpenList)
-            {
-                int openlistDAlen=openlistDA.size();
-                int i=0;
-                while (i<openlistDAlen) {
-                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=8; //标记待扩展点
-                    i++;
-                }
-                break;
-            }
-            currentDA=getopenlist(openlistDA,2);
-        }
+//        //现已初始化节点信息列表，开始获取最短路径
+//        Astarnode currentDA;  //表示当前节点
+//        int DAoptrx;
+//        int DAoptry;
+//        currentDA=anode[endx][endy]; //从终点开始
+//        while (1) {
+//            //从终点开始扩展
+//            if(dir!=2){ //八方向
+//                for(int i=1; i<=4; i++){
+//                    DAoptrx=currentDA.x+(i>=3?1:-1);
+//                    DAoptry=currentDA.y+pow(-1,i);
+//                    if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+//                    if(anode[currentDA.x][DAoptry].isClosedDA and anode[DAoptrx][currentDA.y].isClosedDA) continue;
+//                    if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+//                    if(anode[DAoptrx][DAoptry].gda==0){
+//                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14; //对角走，距离为14
+//                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                        putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+//                        anode[DAoptrx][DAoptry].isInDAOpenList=true;
+//                    }
+//                    else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+14 and anode[DAoptrx][DAoptry].isInDAOpenList){
+//                        anode[DAoptrx][DAoptry].gda=currentDA.gda+14;
+//                        anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;  //f=g+dynamic*h;
+//                        anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                        anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                        resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);
+//                    }
+//                }
+//            }
+//            for(int i=1; i<=4; i++){
+//                DAoptrx=currentDA.x+((i+1)%2)*(i-3);
+//                DAoptry=currentDA.y+(i%2)*(i-2);
+//                if(DAoptrx<=0 or DAoptrx>h or DAoptry<=0 or DAoptry>w) continue;
+//                if(anode[DAoptrx][DAoptry].isClosedDA) continue;
+//                if(anode[DAoptrx][DAoptry].gda==0){
+//                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+//                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                    putopenlist(openlistDA,anode[DAoptrx][DAoptry],2);  //放入开放列表 等待扩展
+//                    anode[DAoptrx][DAoptry].isInDAOpenList=true;
+//                }
+//                else if(anode[DAoptrx][DAoptry].gda>currentDA.gda+10 and anode[DAoptrx][DAoptry].isInDAOpenList){
+//                    anode[DAoptrx][DAoptry].gda=currentDA.gda+10;
+//                    anode[DAoptrx][DAoptry].costDA=anode[DAoptrx][DAoptry].gda+anode[DAoptrx][DAoptry].hda;
+//                    anode[DAoptrx][DAoptry].lastpointDA.setX(currentDA.x);
+//                    anode[DAoptrx][DAoptry].lastpointDA.setY(currentDA.y);
+//                    resortopenlist(openlistDA,anode[DAoptrx][DAoptry],2);   //放入开放列表并重排序开放列表
+//                }
+//            }
+//            if(openlistDA.isEmpty()){
+//                notfound();
+//                return;
+//            }
+//            if(anode[startx][starty].isInDAOpenList)
+//            {
+//                int openlistDAlen=openlistDA.size();
+//                int i=0;
+//                while (i<openlistDAlen) {
+//                    if(openlistDA[i].x != startx or openlistDA[i].y != starty) status[openlistDA[i].x][openlistDA[i].y]=8; //标记待扩展点
+//                    i++;
+//                }
+//                break;
+//            }
+//            currentDA=getopenlist(openlistDA,2);
+//        }
 
-        Astarnode temp=anode[startx][starty],temp1;
-        while(1) //逆序openlistDA节点间的指针
-        {
-            temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
-            anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
-            anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
-            if(temp1.x==endx and temp1.y==endy) break;
-            temp=temp1;
-        }
-        issolved=true;
-        isDstarsolved=true;
-        isDstarrunning=true;
-        isDMapChanged=false;
-        updateandpaint();
-    }
+//        Astarnode temp=anode[startx][starty],temp1;
+//        while(1) //逆序openlistDA节点间的指针
+//        {
+//            temp1=anode[temp.lastpointDA.x()][temp.lastpointDA.y()];
+//            anode[temp1.x][temp1.y].lastpoint.setX(temp.x);
+//            anode[temp1.x][temp1.y].lastpoint.setY(temp.y);
+//            if(temp1.x==endx and temp1.y==endy) break;
+//            temp=temp1;
+//        }
+//        issolved=true;
+//        isDstarsolved=true;
+//        isDstarrunning=true;
+//        isDMapChanged=false;
+//        updateandpaint();
+//    }
 }
 void Astar::runDlitestar(){ //D*lite算法
-    if(!isDliteMapChanged){
-        isDstarrunning=false;
-        isLPArunning=false;
-        if(isDlitesolved) clearways(); //先清除地图
-        if(issolved){
-            //QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);
-            QMessageBox messagebox(this);
-            messagebox.setText("请先清除当前路径哦~");
-            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-            messagebox.setWindowFlag(Qt::FramelessWindowHint);
-            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-            if (textlabel)
-            {
-                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-            }
-            messagebox.show();
-            //延迟
-            QElapsedTimer t1;
-            t1.start();
-            while(t1.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-            animation1->setDuration(500);
-            animation1->setStartValue(messagebox.geometry());
-            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-            animation1->start();
-            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-            animation2->setDuration(500);
-            animation2->setStartValue(1);
-            animation2->setEndValue(0);
-            animation2->start();
-            //延迟
-            QElapsedTimer t2;
-            t2.start();
-            while(t2.elapsed() < 500)
-            {
-                QApplication::processEvents();
-            }
-            return;
-        }
-        if(start->isNull() or end->isNull()){
-            if(!isAnalysis) {
-                //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
-                QMessageBox messagebox(this);
-                messagebox.setText("先设置起点和终点哦~");
-                messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
-                messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
-                messagebox.setWindowFlag(Qt::FramelessWindowHint);
-                QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
-                if (textlabel)
-                {
-                    textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
-                }
-                messagebox.show();
-                //延迟
-                QElapsedTimer t1;
-                t1.start();
-                while(t1.elapsed() < 500)
-                {
-                    QApplication::processEvents();
-                }
-                QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
-                animation1->setDuration(500);
-                animation1->setStartValue(messagebox.geometry());
-                animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
-                animation1->start();
-                QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
-                animation2->setDuration(500);
-                animation2->setStartValue(1);
-                animation2->setEndValue(0);
-                animation2->start();
-                //延迟
-                QElapsedTimer t2;
-                t2.start();
-                while(t2.elapsed() < 500)
-                {
-                    QApplication::processEvents();
-                }
-            }
-            return;
-        }
-        GofirstSearch(); //第一次搜索
-    }
-    else{ //地图发生改变 第二次搜索
-        if(isDlitesolved) clearways(); //先清除地图
-        Initialize();
-        AfterChangedSearch();
-    }
+    showMessage("算法正在开发中...");
+//    if(!isDliteMapChanged){
+//        isDstarrunning=false;
+//        isLPArunning=false;
+//        if(isDlitesolved) clearways(); //先清除地图
+//        if(issolved){
+//            //QMessageBox::information(this,"Caution","请先清除当前路径",QMessageBox::Ok);
+//            QMessageBox messagebox(this);
+//            messagebox.setText("请先清除当前路径哦~");
+//            messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
+//            messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
+//            messagebox.setWindowFlag(Qt::FramelessWindowHint);
+//            QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
+//            if (textlabel)
+//            {
+//                textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
+//            }
+//            messagebox.show();
+//            //延迟
+//            QElapsedTimer t1;
+//            t1.start();
+//            while(t1.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
+//            animation1->setDuration(500);
+//            animation1->setStartValue(messagebox.geometry());
+//            animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
+//            animation1->start();
+//            QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
+//            animation2->setDuration(500);
+//            animation2->setStartValue(1);
+//            animation2->setEndValue(0);
+//            animation2->start();
+//            //延迟
+//            QElapsedTimer t2;
+//            t2.start();
+//            while(t2.elapsed() < 500)
+//            {
+//                QApplication::processEvents();
+//            }
+//            return;
+//        }
+//        if(start->isNull() or end->isNull()){
+//            if(!isAnalysis) {
+//                //QMessageBox::information(this,"Caution","请先设置起点和终点！",QMessageBox::Ok);
+//                QMessageBox messagebox(this);
+//                messagebox.setText("先设置起点和终点哦~");
+//                messagebox.setIconPixmap(QPixmap(":/img/caution.png").scaled(30, 30));
+//                messagebox.setStandardButtons(QMessageBox::NoButton); //隐藏按钮
+//                messagebox.setWindowFlag(Qt::FramelessWindowHint);
+//                QLabel *textlabel = messagebox.findChild<QLabel*>("qt_msgbox_label"); //获取textLabel
+//                if (textlabel)
+//                {
+//                    textlabel->setAlignment(Qt::AlignCenter); //设置textLabel文本居中
+//                }
+//                messagebox.show();
+//                //延迟
+//                QElapsedTimer t1;
+//                t1.start();
+//                while(t1.elapsed() < 500)
+//                {
+//                    QApplication::processEvents();
+//                }
+//                QPropertyAnimation *animation1 = new QPropertyAnimation(&messagebox,"geometry");
+//                animation1->setDuration(500);
+//                animation1->setStartValue(messagebox.geometry());
+//                animation1->setEndValue(QRect(messagebox.x(), messagebox.y()-50, messagebox.width(), messagebox.height()));
+//                animation1->start();
+//                QPropertyAnimation *animation2 = new QPropertyAnimation(&messagebox,"windowOpacity");
+//                animation2->setDuration(500);
+//                animation2->setStartValue(1);
+//                animation2->setEndValue(0);
+//                animation2->start();
+//                //延迟
+//                QElapsedTimer t2;
+//                t2.start();
+//                while(t2.elapsed() < 500)
+//                {
+//                    QApplication::processEvents();
+//                }
+//            }
+//            return;
+//        }
+//        GofirstSearch(); //第一次搜索
+//    }
+//    else{ //地图发生改变 第二次搜索
+//        if(isDlitesolved) clearways(); //先清除地图
+//        Initialize();
+//        AfterChangedSearch();
+//    }
 }
 //检查两个开放列表是否有交集
 bool Astar::intersect(QList<Astarnode>& openlist, QList<Astarnode>& openlistDA){
