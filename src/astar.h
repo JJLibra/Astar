@@ -14,6 +14,7 @@
 #include <random>
 #include <set>
 #include <utility>
+#include <QQueue>
 
 //时间信息
 extern double BfsTime;
@@ -60,10 +61,9 @@ struct Astarnode{
   QPoint lastpointDA; //DA前驱指针
   bool isClosed;    //关闭列表标记
   bool isClosedDA;  //双向A*关闭列表标记
-  int x;
-  int y;
-  int g;    //实际代价
-  int gda;  //双向A*实际代价
+  int x,y;
+  double g;    //实际代价
+  double gda;  //双向A*实际代价
   double h;    //预估代价
   double hda;  //双向A*预估代价
   bool isInOpenList;    //开放列表标记
@@ -72,16 +72,20 @@ struct Astarnode{
   int blocks;   //障碍数
   int dfs;
   int pathflag;
-  int glpa;
-  int rhs; //LPA*预估实际代价
-  int k1;
-  int k2;
+  double k1,k2;
+  double glpa, rhs;
   double pheromone; // 信息素
 };
 
 struct point{ //贝塞尔曲线节点
   int x;
   int y;
+};
+
+struct CompareKeys {
+  bool operator()(const Astarnode& a, const Astarnode& b) const {
+      return a.k1 > b.k1 || (a.k1 == b.k1 && a.k2 > b.k2);
+  }
 };
 
 // 蚂蚁结构
@@ -106,15 +110,17 @@ public:
     void runTraditionalAStar(Astarnode current);
     void runOptimizeAstar(Astarnode current);
     void runDoubleAstar(Astarnode current, Astarnode currentDA);
-    double heuristic(int x1, int y1, int x2, int y2);
-    void initializeLPA();
-    void tracePath(int endX, int endY);
-    void firstSearchLPA();
-    void updateVertex(Astarnode &node);
-    std::pair<double, double> calculateKey(Astarnode &node);
-    void runLPAstar();  //LPA*算法
+
+    void reconstructPath(const Astarnode& goal);
+    void updateKeys(Astarnode& node);
+    void runLPAstar(Astarnode& startNode);
+    void reconstructPath(Astarnode& node);
+    std::vector<Astarnode> getNeighbors(Astarnode& node);
+    int calculateStepCost(Astarnode& current, Astarnode& neighbor);
+
     void runDstar();  //D*算法
     void runDlitestar();  //D*lite算法
+
     void initializeAnts(int numberOfAnts);
     void initializePheromones();
     QVector<QPoint> getNeighbors(const QPoint& current);
@@ -124,6 +130,7 @@ public:
     void removeDuplicates(QVector<QPoint>& path);
     void searchForShortestPath();
     void runACO(); //蚁群算法
+
     void nextpath();
     void clearways();
     void setdir(int a);
@@ -138,19 +145,6 @@ public:
     void savemap(QString dir);
     void loadmap(QString dir);
 private:
-    struct CompareNode {
-        bool operator()(const std::pair<std::pair<double, double>, Astarnode*>& a,
-                        const std::pair<std::pair<double, double>, Astarnode*>& b) const {
-            if (a.first.first != b.first.first)
-                return a.first.first < b.first.first;
-            if (a.first.second != b.first.second)
-                return a.first.second < b.first.second;
-            return a.second < b.second;
-        }
-    };
-    std::vector<std::pair<int, int>> directions = {{0, 1}, {0, -1}, {-1, 0}, {1, 0}};
-    std::set<std::pair<std::pair<double, double>, Astarnode*>, CompareNode> priorityQueue;
-
     QVector<Ant> ants;
     QVector<QVector<double>> pheromoneMatrix;
     const double initialPheromone = 1.0;
@@ -188,7 +182,6 @@ private:
     void resortopenlist(QList<Astarnode> &list, Astarnode data,int isDA);//存入并重排序openlist
     void Initialize(); //初始化
     bool CompareKey(QList<Astarnode> &list,Astarnode &n2); //比较两节点的key值大小 n1<n2返回true 否则false
-    //void calculateKey(Astarnode &n); //LPA*计算key中的k1,k2
     void updateRhs(Astarnode &n,int w,int h,int dir); //LPA*计算最小rhs
     void GofirstSearch(); //LPA*寻找最短路径 第一次搜索
     void AfterChangedSearch(); //第二次搜索

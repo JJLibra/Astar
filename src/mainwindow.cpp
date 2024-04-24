@@ -569,7 +569,7 @@ void MainWindow::openAnalysis(){ //性能分析
     map->clearways();
     //LPA*
     map->sethfunc(15);
-    map->runLPAstar();
+//    map->runLPAstar();
     map->clearways();
     //D*lite
     map->sethfunc(20);

@@ -20,6 +20,9 @@
 #include <vector>
 #include <functional>
 #include <QPoint>
+#include <cmath>
+
+using namespace std;
 
 //时间信息
 double BfsTime;
@@ -192,7 +195,7 @@ void Astar::runAstar(){
         case 15:
         case 16:
         case 17:
-            runLPAstar();
+            runLPAstar(current);
             break;
         case 20:
         case 21:
@@ -431,7 +434,6 @@ void Astar::runTraditionalAStar(Astarnode current) {
                     anode[optrx][optry].lastpoint.setY(current.y);
                     putopenlist(openlist,anode[optrx][optry],1);
                     anode[optrx][optry].isInOpenList=true;
-                    //status[optrx][optry]=5;
                 }
                 else if(anode[optrx][optry].g>current.g+14 and anode[optrx][optry].isInOpenList){
                     anode[optrx][optry].g=current.g+14;
@@ -839,140 +841,141 @@ void Astar::initializePheromones() {
     }
 }
 
-QVector<QPoint> Astar::getNeighbors(const QPoint& current) {
-    QVector<QPoint> neighbors;
-    const int dx[4] = {1, 0, -1, 0};
-    const int dy[4] = {0, 1, 0, -1};
+//QVector<QPoint> Astar::getNeighbors(const QPoint& current) {
+//    QVector<QPoint> neighbors;
+//    const int dx[4] = {1, 0, -1, 0};
+//    const int dy[4] = {0, 1, 0, -1};
 
-    //目前暂时实现四方向
-    for (int i = 0; i < 4; ++i) {
-        int nx = current.x() + dx[i];
-        int ny = current.y() + dy[i];
+//    //目前暂时实现四方向
+//    for (int i = 0; i < 4; ++i) {
+//        int nx = current.x() + dx[i];
+//        int ny = current.y() + dy[i];
 
-        if (nx > 0 && nx <= w && ny > 0 && ny <= h && status[nx][ny] != 1) { // 避开障碍和边界
-            neighbors.append(QPoint(nx, ny));
-        }
-    }
-    return neighbors;
-}
+//        if (nx > 0 && nx <= w && ny > 0 && ny <= h && status[nx][ny] != 1) { // 避开障碍和边界
+//            neighbors.append(QPoint(nx, ny));
+//        }
+//    }
+//    return neighbors;
+//}
 
-void Astar::constructPath(Ant &ant) {
-    QPoint current = *start; //从起点开始
-    ant.path.clear();
-    ant.path.push_back(current);
-    ant.pathLength = 0;
+//void Astar::constructPath(Ant &ant) {
+//    QPoint current = *start; //从起点开始
+//    ant.path.clear();
+//    ant.path.push_back(current);
+//    ant.pathLength = 0;
 
-    //随机数生成器，生成 [0.0, 1.0] 范围内的随机数
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    std::default_random_engine generator(std::random_device{}());
+//    //随机数生成器，生成 [0.0, 1.0] 范围内的随机数
+//    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+//    std::default_random_engine generator(std::random_device{}());
 
-    while (current != *end && ant.path.size() < maxPathlen) {  // 到终点结束循环。避免无限循环，添加最大步数限制
-        QVector<QPoint> neighbors = getNeighbors(current); //判断四个方向状态
+//    while (current != *end && ant.path.size() < maxPathlen) {  // 到终点结束循环。避免无限循环，添加最大步数限制
+//        QVector<QPoint> neighbors = getNeighbors(current); //判断四个方向状态
 
-        if (neighbors.isEmpty()) {
-            break;
-        }
+//        if (neighbors.isEmpty()) {
+//            break;
+//        }
 
-        double sumPheromone = 0;
-        QVector<double> probabilities;
-        for (const QPoint &neighbor : neighbors) {
-            double pheromone = anode[neighbor.x()][neighbor.y()].pheromone;
-            sumPheromone += pheromone;
-            probabilities.push_back(pheromone);
-        }
+//        double sumPheromone = 0;
+//        QVector<double> probabilities;
+//        for (const QPoint &neighbor : neighbors) {
+//            double pheromone = anode[neighbor.x()][neighbor.y()].pheromone;
+//            sumPheromone += pheromone;
+//            probabilities.push_back(pheromone);
+//        }
 
-        if (sumPheromone <= 0) continue;
+//        if (sumPheromone <= 0) continue;
 
-        double randChoice = distribution(generator) * sumPheromone;
-        double cumulative = 0;
-        for (int i = 0; i < probabilities.size(); ++i) {
-            cumulative += probabilities[i];
-            if (randChoice <= cumulative) {
-                QPoint nextPoint = neighbors[i];
-                double distance = sqrt(pow(current.x() - nextPoint.x(), 2) + pow(current.y() - nextPoint.y(), 2));
-                ant.pathLength += distance;  // 更新路径长度
-                ant.path.push_back(nextPoint);  // 更新路径
-                current = nextPoint;
-                break;
-            }
-        }
-    }
-}
+//        double randChoice = distribution(generator) * sumPheromone;
+//        double cumulative = 0;
+//        for (int i = 0; i < probabilities.size(); ++i) {
+//            cumulative += probabilities[i];
+//            if (randChoice <= cumulative) {
+//                QPoint nextPoint = neighbors[i];
+//                double distance = sqrt(pow(current.x() - nextPoint.x(), 2) + pow(current.y() - nextPoint.y(), 2));
+//                ant.pathLength += distance;  // 更新路径长度
+//                ant.path.push_back(nextPoint);  // 更新路径
+//                current = nextPoint;
+//                break;
+//            }
+//        }
+//    }
+//}
 
-void Astar::updatePheromones() {
-    for (Ant &ant : ants) {
-        if (ant.path.size() < 2) continue;  // 如果路径长度小于2，跳过更新
+//void Astar::updatePheromones() {
+//    for (Ant &ant : ants) {
+//        if (ant.path.size() < 2) continue;  // 如果路径长度小于2，跳过更新
 
-        double depositAmount = pheromoneDeposit / ant.pathLength;
-        for (int i = 0; i < ant.path.size() - 1; ++i) {
-            QPoint &current = ant.path[i];
-            QPoint &next = ant.path[i + 1];
-            anode[next.x()][next.y()].pheromone += depositAmount;  // 在路径上的每个节点之间增加信息素
-        }
-    }
-    //qDebug("Pheromones updated for all ants.");
-}
+//        double depositAmount = pheromoneDeposit / ant.pathLength;
+//        for (int i = 0; i < ant.path.size() - 1; ++i) {
+//            QPoint &current = ant.path[i];
+//            QPoint &next = ant.path[i + 1];
+//            anode[next.x()][next.y()].pheromone += depositAmount;  // 在路径上的每个节点之间增加信息素
+//        }
+//    }
+//    //qDebug("Pheromones updated for all ants.");
+//}
 
-void Astar::evaporatePheromones() {
-    for (int i = 1; i <= h; i++) {
-        for (int j = 1; j <= w; j++) {
-            anode[i][j].pheromone *= (1 - evaporationRate);
-        }
-    }
-}
-void Astar::removeDuplicates(QVector<QPoint>& path) {
-    QSet<QPoint> seen;
-    QVector<QPoint> uniquePath;
+//void Astar::evaporatePheromones() {
+//    for (int i = 1; i <= h; i++) {
+//        for (int j = 1; j <= w; j++) {
+//            anode[i][j].pheromone *= (1 - evaporationRate);
+//        }
+//    }
+//}
+//void Astar::removeDuplicates(QVector<QPoint>& path) {
+//    QSet<QPoint> seen;
+//    QVector<QPoint> uniquePath;
 
-    for (const QPoint& point : path) {
-        if (!seen.contains(point)) {
-            seen.insert(point);
-            uniquePath.append(point);
-        }
-    }
+//    for (const QPoint& point : path) {
+//        if (!seen.contains(point)) {
+//            seen.insert(point);
+//            uniquePath.append(point);
+//        }
+//    }
 
-    path.swap(uniquePath);
-}
-void Astar::searchForShortestPath() {
-    double shortestPathLength = std::numeric_limits<double>::max();
-    QVector<QPoint> bestPath; //记录最优路径
+//    path.swap(uniquePath);
+//}
+//void Astar::searchForShortestPath() {
+//    double shortestPathLength = std::numeric_limits<double>::max();
+//    QVector<QPoint> bestPath; //记录最优路径
 
-    for (int iteration = 1; iteration <= maxIterations; ++iteration) { //开始迭代
-        //qDebug() << "Iteration" << iteration << "of" << maxIterations;
-        for (Ant &ant : ants) {
-            constructPath(ant); //蚂蚁开始探路，核心函数
-            if (ant.pathLength < shortestPathLength) { //更新最优路径情况
-                shortestPathLength = ant.pathLength;
-                bestPath = ant.path;
-            }
-        }
-        updatePheromones();  // 一次迭代后，更新信息素
-        evaporatePheromones();  // 信息素蒸发
-    }
+//    for (int iteration = 1; iteration <= maxIterations; ++iteration) { //开始迭代
+//        //qDebug() << "Iteration" << iteration << "of" << maxIterations;
+//        for (Ant &ant : ants) {
+//            constructPath(ant); //蚂蚁开始探路，核心函数
+//            if (ant.pathLength < shortestPathLength) { //更新最优路径情况
+//                shortestPathLength = ant.pathLength;
+//                bestPath = ant.path;
+//            }
+//        }
+//        updatePheromones();  // 一次迭代后，更新信息素
+//        evaporatePheromones();  // 信息素蒸发
+//    }
 
-    qDebug() << "Shortest path length:" << shortestPathLength;
-    qDebug() << "Shortest path:";
-    for (const QPoint &node : bestPath) {
-        qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
-    }
-    removeDuplicates(bestPath);
-    updateandpaintACO(bestPath);
-}
+//    qDebug() << "Shortest path length:" << shortestPathLength;
+//    qDebug() << "Shortest path:";
+//    for (const QPoint &node : bestPath) {
+//        qDebug() << "Node at (" << node.x() << "," << node.y() << ")";
+//    }
+//    removeDuplicates(bestPath);
+//    updateandpaintACO(bestPath);
+//}
 
 void Astar::runACO() {
-    qDebug("Starting ACO algorithm.");
-    initializeAnts(numAnts);  // 初始化一定数量的蚂蚁
-    initializePheromones();
+    showMessage("算法正在开发中...");
+//    qDebug("Starting ACO algorithm.");
+//    initializeAnts(numAnts);  // 初始化一定数量的蚂蚁
+//    initializePheromones();
 
-    if (ants.isEmpty()) { //判断蚂蚁初始化情况
-        qDebug("No ants initialized.");
-        return;
-    }
+//    if (ants.isEmpty()) { //判断蚂蚁初始化情况
+//        qDebug("No ants initialized.");
+//        return;
+//    }
 
-    searchForShortestPath(); //开始搜索
-    isacosolved=true;
-    shutevent=true;
-    qDebug("ACO algorithm completed.");
+//    searchForShortestPath(); //开始搜索
+//    isacosolved=true;
+//    shutevent=true;
+//    qDebug("ACO algorithm completed.");
 }
 void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.g=0;
@@ -981,18 +984,10 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
     node.dfs=0;
     node.pathflag=0;
 
-    // 设置LPA*特有的值
-    node.glpa = std::numeric_limits<double>::infinity();
-    node.rhs = (i == startx && j == starty) ? 0 : std::numeric_limits<double>::infinity();
-    //node.glpa = 1000;
-    //node.rhs = (i == startx && j == starty) ? 0 : 1000;
-
-    // 初始化 lastpoint
-    if (i == startx && j == starty) {
-        node.lastpoint = QPoint(i, j);  // 起点的 lastpoint 指向自己
-    } else {
-        node.lastpoint = QPoint(-1, -1); // 其他点初始化为无效坐标
-    }
+    // LPA*特定初始化
+    node.glpa = INT_MAX;  // 设置glpa为无穷大
+    node.rhs = (i == startx && j == starty) ? 0 : INT_MAX;  // 起点的rhs为0，其他为无穷大
+    node.k1 = node.k2 = 0;
 
     switch(hfunc){  //选择预估距离计算公式
     case 1: //优化A* 切比雪夫
@@ -1027,6 +1022,15 @@ void Astar::initializeNode(Astarnode& node, int i, int j) {
         break;
     case 14: //GBFS 使用欧式距离
         node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        break;
+    case 15: //LPA* 欧式距离
+        node.h=sqrt(((int)pow(i-endx,2)+(int)pow(j-endy,2)))*10;
+        break;
+    case 16: //LPA* 曼哈顿
+        node.h=(abs(i-endx)+abs(j-endy))*10;
+        break;
+    case 17: //LPA* 切比雪夫
+        node.h=abs(abs(i-endx)-abs(j-endy))*10+(abs(i-endx)>abs(j-endy)?abs(j-endy)*14:abs(i-endx)*14)-14;
         break;
     case 23: //Dijkstra
         node.h=0;
@@ -1129,7 +1133,7 @@ void Astar::Initialize(){
         }
     }
     anode[startx][starty].rhs=0; //起点预估实际距离rhs为0
-    calculateKey(anode[startx][starty]); //计算起点key值
+    //calculateKey(anode[startx][starty]); //计算起点key值
     putLPAopenlist(openlist,anode[startx][starty]);
 }
 //LPA*更新节点的rhs值
@@ -1357,136 +1361,80 @@ void Astar::AfterChangedSearch(){
     updateandpaint();
 }
 
-double Astar::heuristic(int x1, int y1, int x2, int y2) {
-    return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+void Astar::updateKeys(Astarnode& node) {
+    // 使用 glpa 替代 g 来更新 k1 和 k2
+    node.k1 = std::min(node.glpa, node.rhs) + node.h; // k1 = min(glpa, rhs) + h
+    node.k2 = std::min(node.glpa, node.rhs);           // k2 = min(glpa, rhs)
 }
 
-void Astar::initializeLPA() {
-    for (int i = 1; i <= h; i++) {
-        for (int j = 1; j <= w; j++) {
-            initializeNode(anode[i][j], i, j);
-        }
-    }
-    priorityQueue.clear();
-    Astarnode &startNode = anode[startx][starty];
-    startNode.rhs = 0;
-    startNode.glpa = heuristic(startx, starty, endx, endy);
-
-    // 正确地将节点插入到优先队列中
-    auto key = calculateKey(startNode);
-    priorityQueue.insert({key, &startNode});
+void Astar::reconstructPath(Astarnode& goal) {
+    // Implement path reconstruction logic here
 }
 
-void Astar::tracePath(int endX, int endY) {
-    qDebug() << "Tracing path from end to start:";
-    int x = endX;
-    int y = endY;
+std::vector<Astarnode> Astar::getNeighbors(Astarnode& current) {
+    std::vector<Astarnode> neighbors;
+    // 包括对角线方向，总共8个可能的移动方向
+    const int dx[8] = {0, 1, 0, -1, -1, -1, 1, 1}; // 方向数组，表示X轴的移动（右，下，左，上，左上，左下，右下，右上）
+    const int dy[8] = {1, 0, -1, 0, 1, -1, -1, 1}; // 方向数组，表示Y轴的移动（右，下，左，上，左上，左下，右下，右上）
 
-    qDebug() << "(1" << startx << "," << starty << ")"; // 最后输出起点
+    // 遍历每个可能的移动方向
+    for (int i = 0; i < 8; i++) {
+        int nx = current.x + dx[i];
+        int ny = current.y + dy[i];
 
-    // 回溯路径
-    while (!(x == startx && y == starty)) {
-        qDebug() << "(2" << x << "," << y << ")";
-        QPoint last = anode[x][y].lastpoint;
-        x = last.x();
-        y = last.y();
-    }
-    qDebug() << "(" << startx << "," << starty << ")"; // 最后输出起点
-}
-
-void Astar::firstSearchLPA() {
-    initializeLPA();  // 确保在搜索开始前初始化所有相关数据结构
-
-    qDebug() << "Starting LPA* search";
-    while (!priorityQueue.empty() && (anode[endx][endy].glpa != anode[endx][endy].rhs)) {
-        auto top = priorityQueue.begin();
-        Astarnode* currentNode = top->second;
-        int x = currentNode->x;
-        int y = currentNode->y;
-
-        qDebug() << "Current node at:" << x << "," << y;
-        if (currentNode->glpa > currentNode->rhs) {
-            qDebug() << "Updating glpa to rhs";
-            currentNode->glpa = currentNode->rhs;
-        } else {
-            qDebug() << "Setting glpa to infinity and updating vertex";
-            currentNode->glpa = std::numeric_limits<double>::infinity();
-            updateVertex(*currentNode);
-        }
-
-        priorityQueue.erase(top);
-        qDebug() << "Removed current node from priority queue";
-
-        // 更新所有邻居
-        qDebug() << "Updating neighbors";
-        for (auto dir : directions) {
-            int nx = x + dir.first;
-            int ny = y + dir.second;
-            if (nx > 0 && nx <= h && ny > 0 && ny <= w && !anode[nx][ny].isClosed) {
-                qDebug() << "Checking neighbor at:" << nx << "," << ny;
-                Astarnode& neighbor = anode[nx][ny];
-                double proposedG = currentNode->g + heuristic(x, y, nx, ny);
-                if (neighbor.g > proposedG) {
-                    qDebug() << "Updating neighbor's g";
-                    neighbor.g = proposedG;
-                    neighbor.lastpoint = QPoint(x, y); // 设置前驱节点
-                    updateVertex(neighbor);
-                }
+        // 检查新坐标是否在网格的边界内
+        if (nx >= 0 && nx < h && ny >= 0 && ny < w) {
+            if (!anode[nx][ny].isClosed) { // 检查该邻居是否不是障碍物或已关闭的节点
+                neighbors.push_back(anode[nx][ny]);
             }
         }
     }
 
-    // 输出路径
-    if (anode[endx][endy].glpa == anode[endx][endy].rhs) {
-        qDebug() << "Path found:";
-        tracePath(endx, endy);
+    return neighbors;
+}
+
+int Astar::calculateStepCost(Astarnode& current, Astarnode& neighbor) {
+    // 如果邻居在对角线上
+    if (abs(current.x - neighbor.x) == 1 && abs(current.y - neighbor.y) == 1) {
+        return 10*sqrt(2); // 对角线移动的成本
     } else {
-        qDebug() << "No path found.";
+        return 10; // 非对角线移动的成本
     }
 }
 
-void Astar::updateVertex(Astarnode &node) {
-    qDebug() << "Updating vertex at:" << node.x << "," << node.y;
-    auto key = calculateKey(node); // 计算新的键值
-    std::pair<std::pair<double, double>, Astarnode*> nodeEntry = {key, &node};
+void Astar::runLPAstar(Astarnode& startNode) {
+    std::priority_queue<Astarnode, std::vector<Astarnode>, CompareKeys> openList;
+    updateKeys(startNode);  // 更新起点键值
+    openList.push(startNode);
+    startNode.isInOpenList = true;
 
-    auto iter = priorityQueue.find(nodeEntry);
-    if (node.g != node.rhs) {
-        if (iter != priorityQueue.end()) {
-            qDebug() << "Erasing old entry from priority queue";
-            priorityQueue.erase(iter);
-            qDebug() << "Old entry removed";
+    while (!openList.empty()) {
+        Astarnode current = openList.top();
+        openList.pop();
+        current.isInOpenList = false;
+
+        if (current.glpa != current.rhs) {
+            current.glpa = current.rhs;
         }
-        qDebug() << "Inserting new entry into priority queue";
-        priorityQueue.insert(nodeEntry);
-        qDebug() << "New entry inserted";
-        node.isInOpenList = true;
-    } else {
-        if (iter != priorityQueue.end()) {
-            qDebug() << "Removing entry from priority queue as g == rhs";
-            priorityQueue.erase(iter);
-            qDebug() << "Entry removed because g == rhs";
-        } else {
-            qDebug() << "Attempted to remove a non-existent entry, which might cause issues";
+
+        std::vector<Astarnode> neighbors = getNeighbors(current);
+        for (Astarnode& neighbor : neighbors) {
+            if (!neighbor.isClosed) {
+                int cost = calculateStepCost(current, neighbor);
+                int tentative_rhs = current.glpa + cost;
+                if (tentative_rhs < neighbor.rhs) {
+                    neighbor.rhs = tentative_rhs;
+                    updateKeys(neighbor);
+                    if (!neighbor.isInOpenList) {
+                        openList.push(neighbor);
+                        neighbor.isInOpenList = true;
+                    }
+                }
+            }
         }
-        node.isInOpenList = false;
     }
 }
 
-std::pair<double, double> Astar::calculateKey(Astarnode &node) {
-    double key1 = std::min(node.glpa, node.rhs) + heuristic(node.x, node.y, endx, endy);
-    double key2 = std::min(node.glpa, node.rhs);
-    return {key1, key2};
-}
-
-void Astar::runLPAstar() //LPA*算法
-{
-    qDebug() << "runLPAstar";
-    qDebug() << "(" << startx << "," << starty << ")";
-    showMessage("算法正在开发中...");
-    //firstSearchLPA();
-
-}
 void Astar::runDstar(){ //D*算法
     showMessage("算法正在开发中...");
 //    if(!isDMapChanged){
