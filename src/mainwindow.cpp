@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include <QActionGroup>
 #include <setxyDialog.h> //引入设置xy坐标的对话框类的头文件
+#include "maplabel.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -9,7 +10,8 @@ MainWindow::MainWindow(QWidget *parent)
     //this->setWindowFlags(Qt::WindowContextHelpButtonHint);
     //setAttribute(Qt::WA_TranslucentBackground);//背景透明
     //this->setWindowFlags(Qt::FramelessWindowHint);
-    this->resize(1050,525);
+    //this->showFullScreen();
+    this->resize(1100,600);
     setWindowTitle("无人机避障和路径搜索");
     setWindowIcon(QIcon(":/img/nwpu.png"));
     map=new Astar("Map",this,15,15,20);
@@ -32,10 +34,6 @@ MainWindow::MainWindow(QWidget *parent)
     rectl[1]=30;
     rectl[2]=45;
     rectl[3]=60;
-
-    isLPA=false;
-    isDstar=false;
-    isDlite=false;
 }
 
 MainWindow::~MainWindow()
@@ -394,6 +392,15 @@ void MainWindow::setToolBar(){
     barset->addWidget(startAstar);
     connect(startAstar,SIGNAL(clicked(bool)),this,SLOT(startA()));
 
+    QToolButton *secondSearch=new QToolButton(this);
+    secondSearch->setText("再润!");
+    secondSearch->setFont(QFont("微软雅黑",12));
+    secondSearch->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    secondSearch->setMinimumSize(75,66);
+    secondSearch->setIcon(QIcon(":/img/telegram.png"));
+    barset->addWidget(secondSearch);
+    connect(secondSearch,SIGNAL(clicked(bool)),this,SLOT(secondSearch()));
+
     QToolButton *nextpath=new QToolButton(this);
     nextpath->setText("NEXTPATH");
     nextpath->setFont(QFont("微软雅黑",12));
@@ -468,11 +475,11 @@ void MainWindow::CreateRandMap(){
 }
 //调用A*算法
 void MainWindow::startA(){
-//    if(isLPA) map->runAstar();
-//    else if(isDstar) map->runAstar();
-//    else if(isDlite) map->runAstar();
-//    else map->runAstar();
     map->runAstar();
+}
+//增量搜索
+void MainWindow::secondSearch(){
+    map->rescanLPAstar();
 }
 //调用清除路径函数
 void MainWindow::clearways(){
@@ -600,164 +607,95 @@ void MainWindow::setbezier() //设置bezier开关
 //设置func的值
 void MainWindow::sethfunc(){
     if(yAstarEudistance->isChecked()){ //优化A*
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(3);
         setStatusBar(map->w,map->h,0,3);
     }else if(yAstarMandistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(2);
         setStatusBar(map->w,map->h,0,2);
     }else if(yAstarDiadistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(1);
         setStatusBar(map->w,map->h,0,1);
     }
     else if(dfsAction->isChecked()){ //深度优先 暂时只支持四方向
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(4);
         setStatusBar(map->w,map->h,2,4);
         set4dir->trigger();
     }
     else if(bfsAction->isChecked()){ //广度优先 暂时只支持四方向
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(5);
         setStatusBar(map->w,map->h,2,5);
         set4dir->trigger();
     }
     else if(acoAction->isChecked()){ //蚁群算法
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(24);
         setStatusBar(map->w,map->h,0,24);
     }
     else if(dijkstraAction->isChecked()){ //Dijkstra
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(23);
         setStatusBar(map->w,map->h,0,23);
     }
     else if(nAstarEudistance->isChecked()){ //传统A*
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(7);
         setStatusBar(map->w,map->h,0,7);
     }
     else if(nAstarMandistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(8);
         setStatusBar(map->w,map->h,0,8);
     }
     else if(nAstarDiadistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(9);
         setStatusBar(map->w,map->h,0,9);
     }
     else if(dAstarEudistance->isChecked()){ //双向A*
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(10);
         setStatusBar(map->w,map->h,0,10);
     }
     else if(dAstarMandistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(11);
         setStatusBar(map->w,map->h,0,11);
     }
     else if(dAstarDiadistance->isChecked()){
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(12);
         setStatusBar(map->w,map->h,0,12);
     }
     else if(DstarEudistance->isChecked()){ //D*
         map->sethfunc(13);
-        isDstar=true;
-        isDlite=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,13);
     }
     else if(DstarMandistance->isChecked()){
         map->sethfunc(18);
-        isDstar=true;
-        isDlite=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,18);
     }
     else if(DstarDiadistance->isChecked()){
         map->sethfunc(19);
-        isDstar=true;
-        isDlite=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,19);
     }
     else if(gbfsAction->isChecked()){ //GBFS
-        isDstar=false;
-        isDlite=false;
-        isLPA=false;
         map->sethfunc(14);
         setStatusBar(map->w,map->h,0,14);
     }
     else if(LPAEudistance->isChecked()){ //LPA*
         map->sethfunc(15);
-        isLPA=true;
-        isDstar=false;
-        isDlite=false;
         setStatusBar(map->w,map->h,0,15);
     }
     else if(LPAMandistance->isChecked()){
         map->sethfunc(16);
-        isLPA=true;
-        isDstar=false;
-        isDlite=false;
         setStatusBar(map->w,map->h,0,16);
     }
     else if(LPADiadistance->isChecked()){
         map->sethfunc(17);
-        isLPA=true;
-        isDstar=false;
-        isDlite=false;
         setStatusBar(map->w,map->h,0,17);
     }
     else if(DliteEudistance->isChecked()){ //D*Lite
         map->sethfunc(20);
-        isDlite=true;
-        isDstar=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,20);
     }
     else if(DliteMandistance->isChecked()){
         map->sethfunc(21);
-        isDlite=true;
-        isDstar=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,21);
     }
     else if(DliteDiadistance->isChecked()){
         map->sethfunc(22);
-        isDlite=true;
-        isDstar=false;
-        isLPA=false;
         setStatusBar(map->w,map->h,0,22);
     }
 }

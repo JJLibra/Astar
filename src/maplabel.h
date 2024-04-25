@@ -8,7 +8,6 @@
 
 #define SQUARE 20
 
-#include<mainwindow.h>
 #include<QMouseEvent>
 #include<QDebug>
 #include<QLabel>
@@ -20,6 +19,9 @@
 #include<QDataStream>
 #include<QPainterPath>
 
+extern int global_aa;
+extern int global_bb;
+
 struct MapData{ //存放地图信息，用于保存
     int sta[120][120];
     int w;
@@ -30,7 +32,7 @@ struct MapData{ //存放地图信息，用于保存
 class MapLabel : public QLabel{
 public:
     int i;
-    MapLabel(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30);  //rectaa表示单元格的边长
+    explicit MapLabel(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30);  //rectaa表示单元格的边长
     void mousePressEvent(QMouseEvent *event);   //鼠标按下事件
     void mouseMoveEvent(QMouseEvent *event);    //鼠标移动事件
     void mouseReleaseEvent(QMouseEvent *event); //鼠标释放事件

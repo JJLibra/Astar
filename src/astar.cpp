@@ -61,6 +61,8 @@ int DliteExtend;
 //深搜
 int dfsPathNum;
 
+extern int global_aa,global_bb;
+
 Astar::Astar(const QString &text, QWidget *parent,int width,int height,int rectaa) : MapLabel(text,parent,width,height,rectaa){
     issolved=false;
     isLPAsolved=false;
@@ -1470,6 +1472,92 @@ void Astar::runLPAstar(Astarnode& startNode) {
         }
     }
     notfound(); //无法找到通路
+}
+
+void Astar::updateEnvironment(int aa, int bb) {
+    qDebug() << "updateEnvironment called with:" << aa << "," << bb;
+//    Astarnode& node = anode[aa][bb];
+
+//    node.rhs = INT_MAX;    // 设置rhs值为无穷大
+//    node.glpa = INT_MAX;   // 设置g值为无穷大
+
+//    // 获取所有邻居节点，并重新计算它们的rhs值
+//    std::vector<Astarnode*> neighbors = getNeighbors(node);
+//    for (Astarnode* neighbor : neighbors) {
+//        if (!neighbor->isClosed) {  // 只处理非障碍物的邻居节点
+//            int original_rhs = neighbor->rhs;
+//            neighbor->rhs = INT_MAX;  // 初始化rhs为无穷大
+
+//            // 重新计算邻居的rhs值，忽略从障碍物方向来的成本
+//            std::vector<Astarnode*> neighborNeighbors = getNeighbors(*neighbor);
+//            for (Astarnode* nn : neighborNeighbors) {
+//                if (!nn->isClosed) {  // 忽略障碍物
+//                    int stepCost = calculateStepCost(*neighbor, *nn);
+//                    neighbor->rhs = std::min(neighbor->rhs, nn->glpa + stepCost);
+//                }
+//            }
+
+//            // 如果rhs值改变，更新节点的优先级，并重新放入OPEN列表
+//            if (original_rhs != neighbor->rhs) {
+//                updateKeys(*neighbor);
+//                if (!neighbor->isInOpenList) {
+//                    openList.push(neighbor);
+//                    neighbor->isInOpenList = true;
+//                }
+//            }
+//        }
+//    }
+}
+
+void Astar::rescanLPAstar() {
+    if(!isLPAsolved) {
+        showMessage("请先完成第一次搜索~");
+        return;
+    }
+
+    updateEnvironment(global_aa, global_bb); //更新环境
+
+//    qDebug() << "Starting rescanLPAstar due to environment change.";
+//    while (!openList.empty()) {
+//        Astarnode* current = openList.top();  // 获取当前优先级最高的节点
+//        openList.pop();  // 移除节点
+//        current->isInOpenList = false;
+
+//        if (current->rhs != current->glpa) {
+//            current->glpa = current->rhs;  // 更新当前节点的g值
+
+//            // 遍历所有邻居
+//            std::vector<Astarnode*> neighbors = getNeighbors(*current);
+//            for (Astarnode* neighbor : neighbors) {
+//                if (!neighbor->isClosed) {  // 确保邻居不是障碍物
+//                    int old_rhs = neighbor->rhs;
+//                    int cost = calculateStepCost(*current, *neighbor);
+//                    int tentative_rhs = current->glpa + cost;
+
+//                    if (tentative_rhs < neighbor->rhs) {
+//                        neighbor->rhs = tentative_rhs;
+//                        neighbor->lastpoint = QPoint(current->x, current->y);  // 更新前驱节点
+//                    }
+
+//                    // 如果邻居的rhs值发生改变，更新并可能重新加入OPEN列表
+//                    if (old_rhs != neighbor->rhs) {
+//                        updateKeys(*neighbor);
+//                        if (!neighbor->isInOpenList) {
+//                            openList.push(neighbor);
+//                            neighbor->isInOpenList = true;
+//                        }
+//                    }
+//                }
+//            }
+//        } else if (current->x == endx && current->y == endy && current->rhs == current->glpa) {
+//            qDebug() << "Path successfully updated.";
+//            reconstructPath(*current);  // 重建路径
+//            return;
+//        }
+//    }
+
+//    qDebug() << "No valid path found after rescan.";
+//    notfound();  // 调用路径未找到处理函数
 }
 
 void Astar::PaintLPAPath(std::vector<QPoint> path) {

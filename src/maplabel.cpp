@@ -4,6 +4,9 @@
 #include<astar.h>
 #include<QColor>
 
+int global_aa;
+int global_bb;
+
 MapLabel::MapLabel(const QString &text, QWidget *parent,int width,int height,int rectaa) : QLabel(text,parent){
     w=width;
     h=height;
@@ -59,7 +62,10 @@ void MapLabel::mousePressEvent(QMouseEvent *event){ //鼠标点击函数重写
             }
             status[aa][bb]=1;
             paintnow(aa,bb,1);
+            global_aa = aa;
+            global_bb = bb;
             mousestatus=LEFT;
+
             if(isLPArunning){
                 isLPAMapChanged=true;
             }else if(isDstarrunning){
@@ -229,6 +235,7 @@ void MapLabel::paintnow(){
     mapl->setPixmap(mappic);
 }
 void MapLabel::paintnow(int x,int y,int sta,bool isUpdatenow){
+    //qDebug() << "x:" << x << "," << "y:" << y;
     QPainter painter(&mappic);
 
     painter.setPen(Qt::black);

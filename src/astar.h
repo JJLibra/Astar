@@ -101,7 +101,7 @@ class Astar : public MapLabel{
 protected:
     //void runAstar();    //A*算法的主体函数
 public:
-    Astar(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30); //定义Astar类的属性：text用来接收地图信息、width，height分别表示阵列的宽高、rectaa表示单元格的边长
+    explicit Astar(const QString &text, QWidget *parent=nullptr,int width=5,int height=5,int rectaa=30); //定义Astar类的属性：text用来接收地图信息、width，height分别表示阵列的宽高、rectaa表示单元格的边长
     void createRandmap();
     void initializeNode(Astarnode& node, int i, int j);
     void calculateBlocks(Astarnode& node, int x, int y);
@@ -119,8 +119,10 @@ public:
     std::vector<Astarnode*> getNeighbors(Astarnode& current);
     int calculateStepCost(Astarnode& current, Astarnode& neighbor);
     void PaintLPAPath(std::vector<QPoint> path);
+    void updateEnvironment(int aa, int bb);
 
     void runLPAstar(Astarnode& startNode);
+    void rescanLPAstar();
     void runDstar(Astarnode& startNode);  //D*算法
     void runDlitestar(Astarnode& startNode);  //D*lite算法
 

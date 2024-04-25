@@ -47,9 +47,6 @@ public:
     void initmainWindow();
     void setStatusBar();
     void setStatusBar(int x,int y,int dir,int hfunc);
-    bool isLPA;
-    bool isDstar;
-    bool isDlite;
     Astar* map;
 
 private slots:
@@ -58,6 +55,7 @@ private slots:
     void CreateRandMap();
     void setpainter();
     void startA();
+    void secondSearch();
     void clearways();
     void nextpath();
     void showmin_dfs();
