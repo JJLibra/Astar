@@ -83,8 +83,11 @@ struct point{ //贝塞尔曲线节点
 };
 
 struct CompareKeys {
-  bool operator()(const Astarnode& a, const Astarnode& b) const {
-      return a.k1 > b.k1 || (a.k1 == b.k1 && a.k2 > b.k2);
+  bool operator()(const Astarnode* a, const Astarnode* b) const {
+      if (a->k1 == b->k1) {
+          return a->k2 > b->k2; // 当 k1 相同时，比较 k2
+      }
+      return a->k1 > b->k1; // 默认情况下比较 k1
   }
 };
 
@@ -115,7 +118,7 @@ public:
     void updateKeys(Astarnode& node);
     void runLPAstar(Astarnode& startNode);
     void reconstructPath(Astarnode& node);
-    std::vector<Astarnode> getNeighbors(Astarnode& node);
+    std::vector<Astarnode*> getNeighbors(Astarnode& current);
     int calculateStepCost(Astarnode& current, Astarnode& neighbor);
 
     void runDstar();  //D*算法
@@ -158,6 +161,9 @@ private:
     Astarnode anode[120][120];  //用于记录阵列节点属性
     QList<Astarnode> openlist;  //开放列表，存放未访问节点
     QList<Astarnode> openlistDA; //双向A星终点开放列表
+    std::priority_queue<Astarnode*, std::vector<Astarnode*>, CompareKeys> openList;
+    std::vector<Astarnode*> allNodes; // 辅助容器
+    //std::priority_queue<Astarnode, std::vector<Astarnode>, CompareKeys> openListLPA;
     QList<Astarnode> successlist;  //已访问列表
     QList<Astarnode> predecesslist;  //未访问列表
     QList<QList<Astarnode>> path; //dfs路径列表
