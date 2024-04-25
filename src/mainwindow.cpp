@@ -468,10 +468,11 @@ void MainWindow::CreateRandMap(){
 }
 //调用A*算法
 void MainWindow::startA(){
-    if(isLPA) map->runAstar();
-    else if(isDstar) map->runAstar();
-    else if(isDlite) map->runAstar();
-    else map->runAstar();
+//    if(isLPA) map->runAstar();
+//    else if(isDstar) map->runAstar();
+//    else if(isDlite) map->runAstar();
+//    else map->runAstar();
+    map->runAstar();
 }
 //调用清除路径函数
 void MainWindow::clearways(){
@@ -565,7 +566,7 @@ void MainWindow::openAnalysis(){ //性能分析
     map->clearways();
     //D*
     map->sethfunc(13);
-    map->runDstar();
+//    map->runDstar();
     map->clearways();
     //LPA*
     map->sethfunc(15);
@@ -573,7 +574,7 @@ void MainWindow::openAnalysis(){ //性能分析
     map->clearways();
     //D*lite
     map->sethfunc(20);
-    map->runDlitestar();
+//    map->runDlitestar();
     map->clearways();
     //默认初始模式
     set8dir->trigger();

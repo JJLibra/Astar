@@ -114,15 +114,15 @@ public:
     void runOptimizeAstar(Astarnode current);
     void runDoubleAstar(Astarnode current, Astarnode currentDA);
 
-    void reconstructPath(const Astarnode& goal);
+    void reconstructPath(Astarnode& goal);
     void updateKeys(Astarnode& node);
-    void runLPAstar(Astarnode& startNode);
-    void reconstructPath(Astarnode& node);
     std::vector<Astarnode*> getNeighbors(Astarnode& current);
     int calculateStepCost(Astarnode& current, Astarnode& neighbor);
+    void PaintLPAPath(std::vector<QPoint> path);
 
-    void runDstar();  //D*算法
-    void runDlitestar();  //D*lite算法
+    void runLPAstar(Astarnode& startNode);
+    void runDstar(Astarnode& startNode);  //D*算法
+    void runDlitestar(Astarnode& startNode);  //D*lite算法
 
     void initializeAnts(int numberOfAnts);
     void initializePheromones();

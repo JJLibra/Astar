@@ -156,7 +156,7 @@ void Astar::runAstar(){
     }
     straight=sqrt(((int)pow(startx-endx,2)+(int)pow(starty-endy,2)))*10;
 
-    //现已初始化节点信息列表，开始获取最短路径
+    //完成初始化节点信息列表，开始获取最短路径
     Astarnode current,currentDA;  //表示当前节点
     current = anode[startx][starty];  //从起点开始
     currentDA = anode[endx][endy]; //从终点开始
@@ -187,7 +187,7 @@ void Astar::runAstar(){
         case 13:
         case 18:
         case 19:
-            runDstar();
+            runDstar(current);
             break;
         case 14:
             runGBFS(current);
@@ -195,12 +195,15 @@ void Astar::runAstar(){
         case 15:
         case 16:
         case 17:
+            while (!openList.empty()) { //先清空优先级队列
+                openList.pop();
+            }
             runLPAstar(current);
             break;
         case 20:
         case 21:
         case 22:
-            runDlitestar();
+            runDlitestar(current);
             break;
         case 23:
             runDijkstra(current);
@@ -1381,7 +1384,6 @@ std::vector<Astarnode*> Astar::getNeighbors(Astarnode& current) {
             if (i < 4) {  // 直接方向
                 neighbors.push_back(&anode[nx][ny]);
             } else {  // 对角方向
-                // 检查对应的两个直接方向是否无障碍
                 int adj1x = current.x + dx[i];  // 相对于对角方向的第一个直接方向
                 int adj1y = current.y;
                 int adj2x = current.x;
@@ -1410,16 +1412,33 @@ void Astar::reconstructPath(Astarnode& goal) {
         path.push_back(QPoint(current->x, current->y));
         QPoint prevPoint = current->lastpoint;
         if (prevPoint.x() == startx && prevPoint.y() == starty) {
-            path.push_back(prevPoint);
+            path.push_back(prevPoint);  // 添加起点
             break;
         }
         current = &anode[prevPoint.x()][prevPoint.y()];
     }
     std::reverse(path.begin(), path.end());
+    PaintLPAPath(path);
+}
+
+void Astar::PaintLPAPath(std::vector<QPoint> path) {
     qDebug() << "Path from start to goal:";
+    QPainter painter(&mappic); //绘制最短路径，这里使用QPainter类绘制
+    painter.setPen(Qt::black);
+    painter.setRenderHint(QPainter::Antialiasing);
+    status[startx][starty]=2; //先设置起点状态，以免起点状态异常
+    status[endx][endy]=3; //先设置终点状态，以免终点状态异常
+    waypath.clear();
     for (const QPoint& point : path) {
+        if(status[point.x()][point.y()]==2 || status[point.x()][point.y()]==3) continue;
+        status[point.x()][point.y()] = 4;
+        waypath.addRoundedRect(border+(point.y()-1)*recta,border+(point.x()-1)*recta,square,square,square/4,square/4);
         qDebug() << "(" << point.x() << ", " << point.y() << ")";
     }
+    painter.setBrush(QBrush(QColor("#ffe100")));
+    painter.drawPath(waypath);
+    painter.end();
+    mapl->setPixmap(mappic);
 }
 
 void Astar::runLPAstar(Astarnode& startNode) {
@@ -1453,6 +1472,7 @@ void Astar::runLPAstar(Astarnode& startNode) {
             }
             qDebug() << "Path found.";
             reconstructPath(*current);
+            isLPAsolved = true;
             return;
         }
 
@@ -1486,7 +1506,7 @@ void Astar::runLPAstar(Astarnode& startNode) {
     qDebug() << "runLPAstar finished without finding a path.";
 }
 
-void Astar::runDstar(){ //D*算法
+void Astar::runDstar(Astarnode& startNode){ //D*算法
     showMessage("算法正在开发中...");
 //    if(!isDMapChanged){
 //        //qDebug("chack Dstar");
@@ -1836,7 +1856,7 @@ void Astar::runDstar(){ //D*算法
 //        updateandpaint();
 //    }
 }
-void Astar::runDlitestar(){ //D*lite算法
+void Astar::runDlitestar(Astarnode& startNode){ //D*lite算法
     showMessage("算法正在开发中...");
 //    if(!isDliteMapChanged){
 //        isDstarrunning=false;
@@ -2607,6 +2627,15 @@ void Astar::clearways(){    //清除当前路径
             }
         }
         isdfssolved=false;
+        mapl->setPixmap(mappic);    //地图数据更新
+    }
+    if(isLPAsolved){
+        for (int i = 1; i <= h; i++) { //遍历所有的节点
+            for (int j = 1; j <= w; j++) {
+                if(status[i][j]==4) paintnow(i,j,0,false);  //将对应的单元绘制为白色
+            }
+        }
+        isLPAsolved=false;
         mapl->setPixmap(mappic);    //地图数据更新
     }
     if(isacosolved){
