@@ -221,12 +221,12 @@ void Astar::runDFS() {
     dfs(startx, starty, p, 0); //初始路径长度为0
     isdfssolved = true;
     if (isdfssolved) {
-            if (isoverflow) {
-            dfsPathNum = -1;
-            return; // 出现溢出 返回
-            }
-            dfsPathNum = path.size();
-            dfs_updateandpaint(path, 0);
+        if (isoverflow) {
+        dfsPathNum = -1;
+        return; // 出现溢出 返回
+        }
+        dfsPathNum = path.size();
+        dfs_updateandpaint(path, 0);
     }
 }
 void Astar::runBFS(Astarnode current) {
@@ -1421,6 +1421,57 @@ void Astar::reconstructPath(Astarnode& goal) {
     PaintLPAPath(path);
 }
 
+void Astar::runLPAstar(Astarnode& startNode) {
+    qDebug() << "Starting runLPAstar.";
+    updateKeys(startNode);  // 更新起点键值
+    openList.push(&startNode);  // 将起点指针推入优先队列
+    allNodes.push_back(&startNode);  // 同时将节点添加到辅助容器
+    startNode.isInOpenList = true;
+
+    while (!openList.empty()) {
+        Astarnode* current = openList.top();  // 获取指针
+        openList.pop();
+        current->isInOpenList = false;
+
+        if (current->glpa != current->rhs) {
+            current->glpa = current->rhs;
+        }
+
+        if (current->x == endx && current->y == endy && current->glpa == current->rhs) {
+            for (auto node : allNodes) { // 输出所有剩余的节点
+                if (node->isInOpenList) {
+                    qDebug() << "(" << node->x << ", " << node->y << ")";
+                }
+            }
+            qDebug() << "Path found.";
+            reconstructPath(*current);
+            isLPAsolved = true;
+            return;
+        }
+
+        std::vector<Astarnode*> neighbors = getNeighbors(*current);
+
+        for (Astarnode* neighbor : neighbors) {
+            if (!neighbor->isClosed) {
+                int cost = calculateStepCost(*current, *neighbor);
+                int tentative_rhs = current->glpa + cost;
+
+                if (tentative_rhs < neighbor->rhs) {
+                    neighbor->rhs = tentative_rhs;
+                    neighbor->lastpoint = QPoint(current->x, current->y);  // 更新前驱节点
+                    updateKeys(*neighbor);
+                    if (!neighbor->isInOpenList) {
+                        openList.push(neighbor);
+                        neighbor->isInOpenList = true;
+                        allNodes.push_back(neighbor); // 同时将新节点添加到辅助容器
+                    }
+                }
+            }
+        }
+    }
+    notfound(); //无法找到通路
+}
+
 void Astar::PaintLPAPath(std::vector<QPoint> path) {
     qDebug() << "Path from start to goal:";
     QPainter painter(&mappic); //绘制最短路径，这里使用QPainter类绘制
@@ -1439,71 +1490,6 @@ void Astar::PaintLPAPath(std::vector<QPoint> path) {
     painter.drawPath(waypath);
     painter.end();
     mapl->setPixmap(mappic);
-}
-
-void Astar::runLPAstar(Astarnode& startNode) {
-    qDebug() << "Starting runLPAstar.";
-    qDebug() << "Start node:" << startNode.x << "," << startNode.y;
-    updateKeys(startNode);  // 更新起点键值
-    openList.push(&startNode);  // 将起点指针推入优先队列
-    allNodes.push_back(&startNode);  // 同时将节点添加到辅助容器
-    startNode.isInOpenList = true;
-
-    while (!openList.empty()) {
-        Astarnode* current = openList.top();  // 获取指针
-        openList.pop();
-        current->isInOpenList = false;
-
-        qDebug() << "Processing node at:" << current->x << "," << current->y;
-        qDebug() << "Current node RHS:" << current->rhs << ", GLPA:" << current->glpa;
-
-        if (current->glpa != current->rhs) {
-            current->glpa = current->rhs;
-            qDebug() << "Updated GLPA to RHS at node:" << current->x << "," << current->y;
-        }
-
-        if (current->x == endx && current->y == endy && current->glpa == current->rhs) {
-            qDebug() << "Current node RHS:" << current->rhs << ", GLPA:" << current->glpa;
-            qDebug() << "NOW:";
-            for (auto node : allNodes) { // 输出所有剩余的节点
-                if (node->isInOpenList) {
-                    qDebug() << "(" << node->x << ", " << node->y << ")";
-                }
-            }
-            qDebug() << "Path found.";
-            reconstructPath(*current);
-            isLPAsolved = true;
-            return;
-        }
-
-        std::vector<Astarnode*> neighbors = getNeighbors(*current);
-        qDebug() << "Node at:" << current->x << "," << current->y << "has" << neighbors.size() << "neighbors";
-
-        for (Astarnode* neighbor : neighbors) {
-            if (!neighbor->isClosed) {
-                int cost = calculateStepCost(*current, *neighbor);
-                int tentative_rhs = current->glpa + cost;
-                qDebug() << "Evaluating neighbor at:" << neighbor->x << "," << neighbor->y;
-                qDebug() << "Cost from" << current->x << "," << current->y << "to" << neighbor->x << "," << neighbor->y << "is" << cost;
-
-                if (tentative_rhs < neighbor->rhs) {
-                    neighbor->rhs = tentative_rhs;
-                    neighbor->lastpoint = QPoint(current->x, current->y);  // 更新前驱节点
-                    updateKeys(*neighbor);
-                    qDebug() << "Updating neighbor at:" << neighbor->x << "," << neighbor->y << "RHS to:" << tentative_rhs;
-                    qDebug() << "Updating neighbor at:" << neighbor->x << "," << neighbor->y << "h:" << neighbor->h;
-
-                    if (!neighbor->isInOpenList) {
-                        openList.push(neighbor);
-                        neighbor->isInOpenList = true;
-                        allNodes.push_back(neighbor); // 同时将新节点添加到辅助容器
-                        qDebug() << "Pushing to openList node at:" << neighbor->x << "," << neighbor->y;
-                    }
-                }
-            }
-        }
-    }
-    qDebug() << "runLPAstar finished without finding a path.";
 }
 
 void Astar::runDstar(Astarnode& startNode){ //D*算法
