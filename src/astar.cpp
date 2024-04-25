@@ -1369,13 +1369,27 @@ void Astar::updateKeys(Astarnode& node) {
 
 std::vector<Astarnode*> Astar::getNeighbors(Astarnode& current) {
     std::vector<Astarnode*> neighbors;
-    const int dx[8] = {0, 1, 0, -1, -1, -1, 1, 1};
-    const int dy[8] = {1, 0, -1, 0, 1, -1, -1, 1};
+    const int dx[8] = {1, 0, -1, 0, 1, -1, -1, 1};  // 4直接方向 + 4对角方向
+    const int dy[8] = {0, 1, 0, -1, 1, 1, -1, -1};
+
     for (int i = 0; i < 8; i++) {
         int nx = current.x + dx[i];
         int ny = current.y + dy[i];
+
+        // 确保邻接点处于边界之内
         if (nx > 0 && nx <= h && ny > 0 && ny <= w && !anode[nx][ny].isClosed) {
-            neighbors.push_back(&anode[nx][ny]);
+            if (i < 4) {  // 直接方向
+                neighbors.push_back(&anode[nx][ny]);
+            } else {  // 对角方向
+                // 检查对应的两个直接方向是否无障碍
+                int adj1x = current.x + dx[i];  // 相对于对角方向的第一个直接方向
+                int adj1y = current.y;
+                int adj2x = current.x;
+                int adj2y = current.y + dy[i];
+
+                if (anode[adj1x][adj1y].isClosed && anode[adj2x][adj2y].isClosed) continue; //避免越过对角障碍
+                neighbors.push_back(&anode[nx][ny]);
+            }
         }
     }
     return neighbors;
