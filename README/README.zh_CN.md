@@ -28,6 +28,8 @@
     <a href="https://github.com/JJLibra/Astar/blob/main/README/README.de_DE.md">德语文档</a>
 </p>
 
+## 🎨 欢迎提交代码！
+
 ## 📇 目录
 
 [运行界面](#运行界面)

@@ -28,6 +28,8 @@
     <a href="https://github.com/JJLibra/Astar/blob/main/README/README.de_DE.md">Deutsch</a>
 </p>
 
+## 🎨 Candidates are very welcome to contribute code.
+
 ## 📇 Table of contents
 
 [Run interface](#Interface)
